@@ -45,9 +45,22 @@ type Trade struct {
 }
 
 type Strat1Agg struct {
-	Avg  float64 `json:"avg"`
-	Diff float64 `json:"diff"`
-	Prc  float64 `json:"prc"`
+	Avg  float64   `json:"avg"`
+	Diff float64   `json:"diff"`
+	Prc  float64   `json:"prc"`
+	Time time.Time `json:"time"`
+}
+
+type PriceTime struct {
+	Price float64   `json:"price"`
+	Time  time.Time `json:"time"`
+}
+
+type MexcMsg struct {
+	Channel string `json:"channel"`
+	Data    struct {
+		Close float64 `json:"c"`
+	} `json:"data"`
 }
 
 // ─────────────── MAIN ───────────────
@@ -58,15 +71,27 @@ func main() {
 		window: (60 * time.Second),
 		coins:  []Coin{},
 	}
+	mex := Exchange{
+		baseWS: "contract.mexc.com",
+		window: (60 * time.Second),
+		coins:  []Coin{},
+	}
 	binance.coins = append(binance.coins, Coin{symbol: "btcusdt"})
+	mex.coins = append(mex.coins, Coin{symbol: "BTC_USDT"})
 
 	btcustdChannel := make(chan Strat1Agg)
+	mexBtcustdPrice := make(chan PriceTime)
 	go binance.leadingExchangeAvgWSS(binance.coins[0], btcustdChannel)
+	go mex.startMexcWS(mex.coins[0], mexBtcustdPrice)
 
 	for {
-		lastVal := <-btcustdChannel
-		jsonData, _ := json.Marshal(lastVal)
-		fmt.Printf("%s\n", jsonData)
+		select {
+		case res := <-btcustdChannel:
+			fmt.Printf("Binance %v\n", res)
+			fmt.Println(res)
+		case res := <-mexBtcustdPrice:
+			fmt.Printf("Mex %v\n", res)
+		}
 	}
 }
 
@@ -135,8 +160,62 @@ func (exch *Exchange) leadingExchangeAvgWSS(c Coin, aggr chan<- Strat1Agg) {
 			Avg:  vwap,
 			Diff: dif,
 			Prc:  price,
+			Time: time.Now(),
 		}
 
 		aggr <- aggregation
+	}
+}
+
+func (exch *Exchange) startMexcWS(c Coin, price chan<- PriceTime) {
+	u := url.URL{
+		Scheme: "wss",
+		Host:   exch.baseWS,
+		Path:   "edge",
+	}
+
+	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	if err != nil {
+		log.Fatal("MEXC WS error:", err)
+	}
+	defer conn.Close()
+
+	// Subscribe
+	sub := map[string]any{
+		"method": "sub.kline",
+		"param": map[string]string{
+			"symbol":   c.symbol,
+			"interval": "Min1",
+		},
+		"gzip": false,
+	}
+	conn.WriteJSON(sub)
+
+	// Ping loop
+	go func() {
+		for {
+			time.Sleep(15 * time.Second)
+			conn.WriteJSON(map[string]string{"method": "ping"})
+		}
+	}()
+
+	for {
+		_, msg, err := conn.ReadMessage()
+		if err != nil {
+			return
+		}
+
+		var m MexcMsg
+		if err := json.Unmarshal(msg, &m); err != nil {
+			continue
+		}
+
+		if m.Channel == "push.kline" {
+			res := PriceTime{
+				Price: m.Data.Close,
+				Time:  time.Now(),
+			}
+			price <- res
+		}
 	}
 }

@@ -12,9 +12,19 @@ import (
 )
 
 type Exchange struct {
+	name   string
 	baseWS string
 	window time.Duration
-	coins  []Coin
+	coins  map[string]Coin
+}
+
+func (exch Exchange) getCoin(coin string) (Coin, bool) {
+	res, ok := exch.coins[coin]
+	return res, ok
+}
+
+func (exch Exchange) getName() string {
+	return exch.name
 }
 
 type Coin struct {
@@ -22,7 +32,7 @@ type Coin struct {
 	multiplyer int64
 }
 
-func (c *Coin) getPrice(basePrice float64) float64 {
+func (c Coin) getPrice(basePrice float64) float64 {
 	if c.multiplyer != 0 {
 		return basePrice * float64(c.multiplyer)
 	} else {
@@ -31,8 +41,6 @@ func (c *Coin) getPrice(basePrice float64) float64 {
 }
 
 const (
-	baseWS = "wss://fstream.binance.com"
-	symbol = "btcusdt"
 	window = 60 * time.Second
 )
 
@@ -53,7 +61,7 @@ type Trade struct {
 	Volume float64
 }
 
-type Strat1Agg struct {
+type AvgMeanDiff struct {
 	Avg  float64   `json:"avg"`
 	Diff float64   `json:"diff"`
 	Prc  float64   `json:"prc"`
@@ -76,42 +84,81 @@ type MexcMsg struct {
 
 func main() {
 	binance := Exchange{
+		name:   "Binance",
 		baseWS: "fstream.binance.com",
 		window: (60 * time.Second),
-		coins:  []Coin{},
+		coins:  map[string]Coin{},
 	}
 	mex := Exchange{
+		name:   "Mex",
 		baseWS: "contract.mexc.com",
 		window: (60 * time.Second),
-		coins:  []Coin{},
+		coins:  map[string]Coin{},
 	}
-	binance.coins = append(binance.coins, Coin{symbol: "btcusdt"})
-	binance.coins = append(binance.coins, Coin{symbol: "1000shibusdt"})
-	mex.coins = append(mex.coins, Coin{symbol: "BTC_USDT"})
-	mex.coins = append(mex.coins, Coin{symbol: "SHIB_USDT"})
+	binance.coins["btcusdt"] = Coin{symbol: "btcusdt"}
+	binance.coins["shiba"] = Coin{symbol: "1000shibusdt"}
+	mex.coins["btcusdt"] = Coin{symbol: "BTC_USDT"}
+	mex.coins["shiba"] = Coin{symbol: "SHIB_USDT", multiplyer: 1000}
 
-	btcustdChannel := make(chan Strat1Agg)
-	mexBtcustdPrice := make(chan PriceTime)
-	go binance.leadingExchangeAvgWSS(binance.coins[0], btcustdChannel)
-	go mex.startMexcWS(mex.coins[0], mexBtcustdPrice)
+	go strategyPriceMeanDiffDirection(&binance, &mex, "btcusdt")
+	go strategyPriceMeanDiffDirection(&binance, &mex, "shiba")
+	for {
+		time.Sleep(1 * time.Second)
+	}
+}
 
-	btcinfo := Strat1Agg{}
-	mexinfo := PriceTime{}
+type ExchangeBase interface {
+	getCoin(coin string) (Coin, bool)
+	getName() string
+}
+
+type ExchangeAvgMeanDiff interface {
+	ExchangeBase
+	getAvgMeanDiff(c Coin, aggr chan<- AvgMeanDiff)
+}
+
+type ExchangePrice interface {
+	ExchangeBase
+	getPrice(c Coin, price chan<- PriceTime)
+}
+
+func strategyPriceMeanDiffDirection(leadExchange ExchangeAvgMeanDiff, slowExchange ExchangePrice, coinName string) {
+	leadExchCoin, ok := leadExchange.getCoin(coinName)
+	if !ok {
+		fmt.Println("Lead exchange doesn't has required coin")
+		return
+	}
+
+	slowExchCoin, ok := slowExchange.getCoin(coinName)
+	if !ok {
+		fmt.Println("Slow exchange doesn't has required coin")
+		return
+	}
+
+	leadAvgMeanDiffChannel := make(chan AvgMeanDiff)
+	leadPriceChannel := make(chan PriceTime)
+	go leadExchange.getAvgMeanDiff(leadExchCoin, leadAvgMeanDiffChannel)
+	go slowExchange.getPrice(slowExchCoin, leadPriceChannel)
+
+	AMD := AvgMeanDiff{}
+	PT := PriceTime{}
 	for {
 		select {
-		case res := <-btcustdChannel:
-			btcinfo = res
-		case res := <-mexBtcustdPrice:
-			mexinfo = res
+		case res := <-leadAvgMeanDiffChannel:
+			AMD = res
+		case res := <-leadPriceChannel:
+			PT = res
 		}
-		if (btcinfo != Strat1Agg{} && mexinfo != PriceTime{}) {
-			fmt.Printf("Price Binance - Mex %v\n", binance.coins[0].getPrice(btcinfo.Prc)-mex.coins[0].getPrice(mexinfo.Price))
-			fmt.Printf("Binance diff %v\n", btcinfo.Diff)
+		if (AMD != AvgMeanDiff{} && PT != PriceTime{}) {
+			fmt.Println("=============================")
+			fmt.Printf("Strategy 1, coin %v\n", coinName)
+			fmt.Printf("Price %v - %v %v\n", leadExchange.getName(), slowExchange.getName(), leadExchCoin.getPrice(AMD.Prc)-slowExchCoin.getPrice(PT.Price))
+			fmt.Printf("%v diff %v\n", leadExchange.getName(), AMD.Diff)
 		}
 	}
 }
 
-func (exch *Exchange) leadingExchangeAvgWSS(c Coin, aggr chan<- Strat1Agg) {
+func (exch *Exchange) getAvgMeanDiff(c Coin, aggr chan<- AvgMeanDiff) {
 	u := url.URL{
 		Scheme: "wss",
 		Host:   exch.baseWS,
@@ -124,7 +171,7 @@ func (exch *Exchange) leadingExchangeAvgWSS(c Coin, aggr chan<- Strat1Agg) {
 	}
 	defer conn.Close()
 
-	fmt.Println("Connected to Binance aggTrade:", symbol)
+	// fmt.Printf("Connected to %v aggTrade: %v\n", exch.name, c.symbol)
 
 	var trades []Trade
 
@@ -172,7 +219,7 @@ func (exch *Exchange) leadingExchangeAvgWSS(c Coin, aggr chan<- Strat1Agg) {
 
 		vwap := sumPV / sumV
 		dif := vwap - price
-		aggregation := Strat1Agg{
+		aggregation := AvgMeanDiff{
 			Avg:  vwap,
 			Diff: dif,
 			Prc:  price,
@@ -183,7 +230,7 @@ func (exch *Exchange) leadingExchangeAvgWSS(c Coin, aggr chan<- Strat1Agg) {
 	}
 }
 
-func (exch *Exchange) startMexcWS(c Coin, price chan<- PriceTime) {
+func (exch *Exchange) getPrice(c Coin, price chan<- PriceTime) {
 	u := url.URL{
 		Scheme: "wss",
 		Host:   exch.baseWS,

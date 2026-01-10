@@ -6,17 +6,39 @@ import (
 	"log"
 	"net/url"
 	"strconv"
-	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
 
-const (
-	baseWS = "wss://fstream.binance.com"
-	symbol = "btcusdt"
-	window = 60 * time.Second
-)
+type Exchange struct {
+	name   string
+	baseWS string
+	coins  map[string]Coin
+}
+
+func (exch Exchange) getCoin(coin string) (Coin, bool) {
+	res, ok := exch.coins[coin]
+	return res, ok
+}
+
+func (exch Exchange) getName() string {
+	return exch.name
+}
+
+type Coin struct {
+	symbol     string
+	multiplyer int64
+	window     time.Duration
+}
+
+func (c Coin) getPrice(basePrice float64) float64 {
+	if c.multiplyer != 0 {
+		return basePrice * float64(c.multiplyer)
+	} else {
+		return basePrice
+	}
+}
 
 // ─────────────── STRUCTS ───────────────
 
@@ -35,7 +57,17 @@ type Trade struct {
 	Volume float64
 }
 
-/* ─────────────── MEXC STRUCT ─────────────── */
+type AvgMeanDiff struct {
+	Avg  float64   `json:"avg"`
+	Diff float64   `json:"diff"`
+	Prc  float64   `json:"prc"`
+	Time time.Time `json:"time"`
+}
+
+type PriceTime struct {
+	Price float64   `json:"price"`
+	Time  time.Time `json:"time"`
+}
 
 type MexcMsg struct {
 	Channel string `json:"channel"`
@@ -47,19 +79,84 @@ type MexcMsg struct {
 // ─────────────── MAIN ───────────────
 
 func main() {
+	binance := Exchange{
+		name:   "Binance",
+		baseWS: "fstream.binance.com",
+		coins:  map[string]Coin{},
+	}
+	mex := Exchange{
+		name:   "Mex",
+		baseWS: "contract.mexc.com",
+		coins:  map[string]Coin{},
+	}
+	binance.coins["btcusdt"] = Coin{symbol: "btcusdt", window: (60 * time.Second)}
+	binance.coins["shiba"] = Coin{symbol: "1000shibusdt", window: (60 * time.Second)}
+	mex.coins["btcusdt"] = Coin{symbol: "BTC_USDT", window: (60 * time.Second)}
+	mex.coins["shiba"] = Coin{symbol: "SHIB_USDT", multiplyer: 1000, window: (60 * time.Second)}
 
-	/* ───── MEXC PRICE HOLDER ───── */
-	var mexcPrice atomic.Value
-	mexcPrice.Store(float64(0))
+	go strategyPriceMeanDiffDirection(&binance, &mex, "btcusdt")
+	go strategyPriceMeanDiffDirection(&binance, &mex, "shiba")
+	for {
+		time.Sleep(1 * time.Second)
+	}
+}
 
-	/* ───── START MEXC WS ───── */
-	go startMexcWS(&mexcPrice)
+type ExchangeBase interface {
+	getCoin(coin string) (Coin, bool)
+	getName() string
+}
 
-	/* ───── BINANCE WS ───── */
+type ExchangeAvgMeanDiff interface {
+	ExchangeBase
+	getAvgMeanDiff(c Coin, aggr chan<- AvgMeanDiff)
+}
+
+type ExchangePrice interface {
+	ExchangeBase
+	getPrice(c Coin, price chan<- PriceTime)
+}
+
+func strategyPriceMeanDiffDirection(leadExchange ExchangeAvgMeanDiff, slowExchange ExchangePrice, coinName string) {
+	leadExchCoin, ok := leadExchange.getCoin(coinName)
+	if !ok {
+		fmt.Println("Lead exchange doesn't has required coin")
+		return
+	}
+
+	slowExchCoin, ok := slowExchange.getCoin(coinName)
+	if !ok {
+		fmt.Println("Slow exchange doesn't has required coin")
+		return
+	}
+
+	leadAvgMeanDiffChannel := make(chan AvgMeanDiff)
+	leadPriceChannel := make(chan PriceTime)
+	go leadExchange.getAvgMeanDiff(leadExchCoin, leadAvgMeanDiffChannel)
+	go slowExchange.getPrice(slowExchCoin, leadPriceChannel)
+
+	AMD := AvgMeanDiff{}
+	PT := PriceTime{}
+	for {
+		select {
+		case res := <-leadAvgMeanDiffChannel:
+			AMD = res
+		case res := <-leadPriceChannel:
+			PT = res
+		}
+		if (AMD != AvgMeanDiff{} && PT != PriceTime{}) {
+			fmt.Println("=============================")
+			fmt.Printf("Strategy 1, coin %v\n", coinName)
+			fmt.Printf("Price %v - %v %v\n", leadExchange.getName(), slowExchange.getName(), leadExchCoin.getPrice(AMD.Prc)-slowExchCoin.getPrice(PT.Price))
+			fmt.Printf("%v diff %v\n", leadExchange.getName(), AMD.Diff)
+		}
+	}
+}
+
+func (exch *Exchange) getAvgMeanDiff(c Coin, aggr chan<- AvgMeanDiff) {
 	u := url.URL{
 		Scheme: "wss",
-		Host:   "fstream.binance.com",
-		Path:   "/ws/" + symbol + "@aggTrade",
+		Host:   exch.baseWS,
+		Path:   "/ws/" + c.symbol + "@aggTrade",
 	}
 
 	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
@@ -68,7 +165,7 @@ func main() {
 	}
 	defer conn.Close()
 
-	fmt.Println("Connected to Binance aggTrade:", symbol)
+	// fmt.Printf("Connected to %v aggTrade: %v\n", exch.name, c.symbol)
 
 	var trades []Trade
 
@@ -94,7 +191,7 @@ func main() {
 		})
 
 		// Remove expired trades
-		cutoff := time.Now().Add(-window)
+		cutoff := time.Now().Add(-c.window)
 		filtered := trades[:0]
 		for _, tr := range trades {
 			if tr.Time.After(cutoff) {
@@ -109,36 +206,32 @@ func main() {
 			sumPV += tr.Price * tr.Volume
 			sumV += tr.Volume
 		}
+
 		if sumV == 0 {
 			continue
 		}
 
 		vwap := sumPV / sumV
-		diff := vwap - price
+		dif := vwap - price
+		aggregation := AvgMeanDiff{
+			Avg:  vwap,
+			Diff: dif,
+			Prc:  price,
+			Time: time.Now(),
+		}
 
-		/* ───── READ MEXC PRICE ───── */
-		mPrice := mexcPrice.Load().(float64)
-		spread := price - mPrice
-
-		fmt.Printf(
-			"%s | BIN: %.2f | VWAP: %.2f | ΔVWAP: %+0.5f | MEXC: %.2f | Δ(BIN-MEXC): %+0.5f | Trades: %d\n",
-			time.Now().Format("15:04:05.000"),
-			price,
-			vwap,
-			diff,
-			mPrice,
-			spread,
-			len(trades),
-		)
+		aggr <- aggregation
 	}
 }
 
-/* ─────────────── MEXC WS ─────────────── */
+func (exch *Exchange) getPrice(c Coin, price chan<- PriceTime) {
+	u := url.URL{
+		Scheme: "wss",
+		Host:   exch.baseWS,
+		Path:   "edge",
+	}
 
-func startMexcWS(price *atomic.Value) {
-	wsURL := "wss://contract.mexc.com/edge"
-
-	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
 		log.Fatal("MEXC WS error:", err)
 	}
@@ -148,7 +241,7 @@ func startMexcWS(price *atomic.Value) {
 	sub := map[string]any{
 		"method": "sub.kline",
 		"param": map[string]string{
-			"symbol":   "BTC_USDT",
+			"symbol":   c.symbol,
 			"interval": "Min1",
 		},
 		"gzip": false,
@@ -175,7 +268,11 @@ func startMexcWS(price *atomic.Value) {
 		}
 
 		if m.Channel == "push.kline" {
-			price.Store(m.Data.Close)
+			res := PriceTime{
+				Price: m.Data.Close,
+				Time:  time.Now(),
+			}
+			price <- res
 		}
 	}
 }

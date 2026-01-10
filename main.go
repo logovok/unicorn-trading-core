@@ -84,13 +84,21 @@ func main() {
 	go binance.leadingExchangeAvgWSS(binance.coins[0], btcustdChannel)
 	go mex.startMexcWS(mex.coins[0], mexBtcustdPrice)
 
+	btcinfo := Strat1Agg{}
+	mexinfo := PriceTime{}
 	for {
 		select {
 		case res := <-btcustdChannel:
-			fmt.Printf("Binance %v\n", res)
-			fmt.Println(res)
+			btcinfo = res
+			// fmt.Printf("Binance %v\n", res)
+			// fmt.Println(res)
 		case res := <-mexBtcustdPrice:
-			fmt.Printf("Mex %v\n", res)
+			mexinfo = res
+			// fmt.Printf("Mex %v\n", res)
+		}
+		if (btcinfo != Strat1Agg{} && mexinfo != PriceTime{}) {
+			fmt.Printf("Price Binance - Mex %v\n", btcinfo.Prc-mexinfo.Price)
+			fmt.Printf("Binance diff %v\n", btcinfo.Diff)
 		}
 	}
 }

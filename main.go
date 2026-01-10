@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/url"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -34,9 +35,27 @@ type Trade struct {
 	Volume float64
 }
 
+/* ─────────────── MEXC STRUCT ─────────────── */
+
+type MexcMsg struct {
+	Channel string `json:"channel"`
+	Data    struct {
+		Close float64 `json:"c"`
+	} `json:"data"`
+}
+
 // ─────────────── MAIN ───────────────
 
 func main() {
+
+	/* ───── MEXC PRICE HOLDER ───── */
+	var mexcPrice atomic.Value
+	mexcPrice.Store(float64(0))
+
+	/* ───── START MEXC WS ───── */
+	go startMexcWS(&mexcPrice)
+
+	/* ───── BINANCE WS ───── */
 	u := url.URL{
 		Scheme: "wss",
 		Host:   "fstream.binance.com",
@@ -90,7 +109,6 @@ func main() {
 			sumPV += tr.Price * tr.Volume
 			sumV += tr.Volume
 		}
-
 		if sumV == 0 {
 			continue
 		}
@@ -98,13 +116,66 @@ func main() {
 		vwap := sumPV / sumV
 		diff := vwap - price
 
+		/* ───── READ MEXC PRICE ───── */
+		mPrice := mexcPrice.Load().(float64)
+		spread := price - mPrice
+
 		fmt.Printf(
-			"%s | Price: %.2f | VWAP(1m): %.2f | Diff(VWAP-Price): %+0.5f | Trades: %d\n",
+			"%s | BIN: %.2f | VWAP: %.2f | ΔVWAP: %+0.5f | MEXC: %.2f | Δ(BIN-MEXC): %+0.5f | Trades: %d\n",
 			time.Now().Format("15:04:05.000"),
 			price,
 			vwap,
 			diff,
+			mPrice,
+			spread,
 			len(trades),
 		)
+	}
+}
+
+/* ─────────────── MEXC WS ─────────────── */
+
+func startMexcWS(price *atomic.Value) {
+	wsURL := "wss://contract.mexc.com/edge"
+
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		log.Fatal("MEXC WS error:", err)
+	}
+	defer conn.Close()
+
+	// Subscribe
+	sub := map[string]any{
+		"method": "sub.kline",
+		"param": map[string]string{
+			"symbol":   "BTC_USDT",
+			"interval": "Min1",
+		},
+		"gzip": false,
+	}
+	conn.WriteJSON(sub)
+
+	// Ping loop
+	go func() {
+		for {
+			time.Sleep(15 * time.Second)
+			conn.WriteJSON(map[string]string{"method": "ping"})
+		}
+	}()
+
+	for {
+		_, msg, err := conn.ReadMessage()
+		if err != nil {
+			return
+		}
+
+		var m MexcMsg
+		if err := json.Unmarshal(msg, &m); err != nil {
+			continue
+		}
+
+		if m.Channel == "push.kline" {
+			price.Store(m.Data.Close)
+		}
 	}
 }

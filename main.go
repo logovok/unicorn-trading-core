@@ -18,7 +18,16 @@ type Exchange struct {
 }
 
 type Coin struct {
-	symbol string
+	symbol     string
+	multiplyer int64
+}
+
+func (c *Coin) getPrice(basePrice float64) float64 {
+	if c.multiplyer != 0 {
+		return basePrice * float64(c.multiplyer)
+	} else {
+		return basePrice
+	}
 }
 
 const (
@@ -77,7 +86,9 @@ func main() {
 		coins:  []Coin{},
 	}
 	binance.coins = append(binance.coins, Coin{symbol: "btcusdt"})
+	binance.coins = append(binance.coins, Coin{symbol: "1000shibusdt"})
 	mex.coins = append(mex.coins, Coin{symbol: "BTC_USDT"})
+	mex.coins = append(mex.coins, Coin{symbol: "SHIB_USDT"})
 
 	btcustdChannel := make(chan Strat1Agg)
 	mexBtcustdPrice := make(chan PriceTime)
@@ -90,14 +101,11 @@ func main() {
 		select {
 		case res := <-btcustdChannel:
 			btcinfo = res
-			// fmt.Printf("Binance %v\n", res)
-			// fmt.Println(res)
 		case res := <-mexBtcustdPrice:
 			mexinfo = res
-			// fmt.Printf("Mex %v\n", res)
 		}
 		if (btcinfo != Strat1Agg{} && mexinfo != PriceTime{}) {
-			fmt.Printf("Price Binance - Mex %v\n", btcinfo.Prc-mexinfo.Price)
+			fmt.Printf("Price Binance - Mex %v\n", binance.coins[0].getPrice(btcinfo.Prc)-mex.coins[0].getPrice(mexinfo.Price))
 			fmt.Printf("Binance diff %v\n", btcinfo.Diff)
 		}
 	}

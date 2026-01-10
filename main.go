@@ -14,7 +14,6 @@ import (
 type Exchange struct {
 	name   string
 	baseWS string
-	window time.Duration
 	coins  map[string]Coin
 }
 
@@ -30,6 +29,7 @@ func (exch Exchange) getName() string {
 type Coin struct {
 	symbol     string
 	multiplyer int64
+	window     time.Duration
 }
 
 func (c Coin) getPrice(basePrice float64) float64 {
@@ -39,10 +39,6 @@ func (c Coin) getPrice(basePrice float64) float64 {
 		return basePrice
 	}
 }
-
-const (
-	window = 60 * time.Second
-)
 
 // ─────────────── STRUCTS ───────────────
 
@@ -86,19 +82,17 @@ func main() {
 	binance := Exchange{
 		name:   "Binance",
 		baseWS: "fstream.binance.com",
-		window: (60 * time.Second),
 		coins:  map[string]Coin{},
 	}
 	mex := Exchange{
 		name:   "Mex",
 		baseWS: "contract.mexc.com",
-		window: (60 * time.Second),
 		coins:  map[string]Coin{},
 	}
-	binance.coins["btcusdt"] = Coin{symbol: "btcusdt"}
-	binance.coins["shiba"] = Coin{symbol: "1000shibusdt"}
-	mex.coins["btcusdt"] = Coin{symbol: "BTC_USDT"}
-	mex.coins["shiba"] = Coin{symbol: "SHIB_USDT", multiplyer: 1000}
+	binance.coins["btcusdt"] = Coin{symbol: "btcusdt", window: (60 * time.Second)}
+	binance.coins["shiba"] = Coin{symbol: "1000shibusdt", window: (60 * time.Second)}
+	mex.coins["btcusdt"] = Coin{symbol: "BTC_USDT", window: (60 * time.Second)}
+	mex.coins["shiba"] = Coin{symbol: "SHIB_USDT", multiplyer: 1000, window: (60 * time.Second)}
 
 	go strategyPriceMeanDiffDirection(&binance, &mex, "btcusdt")
 	go strategyPriceMeanDiffDirection(&binance, &mex, "shiba")
@@ -197,7 +191,7 @@ func (exch *Exchange) getAvgMeanDiff(c Coin, aggr chan<- AvgMeanDiff) {
 		})
 
 		// Remove expired trades
-		cutoff := time.Now().Add(-window)
+		cutoff := time.Now().Add(-c.window)
 		filtered := trades[:0]
 		for _, tr := range trades {
 			if tr.Time.After(cutoff) {

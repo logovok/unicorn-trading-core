@@ -11,6 +11,16 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type Exchange struct {
+	baseWS string
+	window time.Duration
+	coins  []Coin
+}
+
+type Coin struct {
+	symbol string
+}
+
 const (
 	baseWS = "wss://fstream.binance.com"
 	symbol = "btcusdt"
@@ -34,13 +44,37 @@ type Trade struct {
 	Volume float64
 }
 
+type Strat1Agg struct {
+	Avg  float64 `json:"avg"`
+	Diff float64 `json:"diff"`
+	Prc  float64 `json:"prc"`
+}
+
 // ─────────────── MAIN ───────────────
 
 func main() {
+	binance := Exchange{
+		baseWS: "fstream.binance.com",
+		window: (60 * time.Second),
+		coins:  []Coin{},
+	}
+	binance.coins = append(binance.coins, Coin{symbol: "btcusdt"})
+
+	btcustdChannel := make(chan Strat1Agg)
+	go binance.leadingExchangeAvgWSS(binance.coins[0], btcustdChannel)
+
+	for {
+		lastVal := <-btcustdChannel
+		jsonData, _ := json.Marshal(lastVal)
+		fmt.Printf("%s\n", jsonData)
+	}
+}
+
+func (exch *Exchange) leadingExchangeAvgWSS(c Coin, aggr chan<- Strat1Agg) {
 	u := url.URL{
 		Scheme: "wss",
-		Host:   "fstream.binance.com",
-		Path:   "/ws/" + symbol + "@aggTrade",
+		Host:   exch.baseWS,
+		Path:   "/ws/" + c.symbol + "@aggTrade",
 	}
 
 	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
@@ -96,15 +130,13 @@ func main() {
 		}
 
 		vwap := sumPV / sumV
-		diff := vwap - price
+		dif := vwap - price
+		aggregation := Strat1Agg{
+			Avg:  vwap,
+			Diff: dif,
+			Prc:  price,
+		}
 
-		fmt.Printf(
-			"%s | Price: %.2f | VWAP(1m): %.2f | Diff(VWAP-Price): %+0.5f | Trades: %d\n",
-			time.Now().Format("15:04:05.000"),
-			price,
-			vwap,
-			diff,
-			len(trades),
-		)
+		aggr <- aggregation
 	}
 }

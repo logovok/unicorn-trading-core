@@ -18,6 +18,14 @@ type Thresholds struct {
 	crossExchangePriceThreshold float64
 }
 
+type Binance struct {
+	Exchange
+}
+
+type Mex struct {
+	Exchange
+}
+
 type Coin struct {
 	symbol     string
 	multiplier int64 `default:"1"`

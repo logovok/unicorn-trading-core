@@ -62,15 +62,19 @@ func (c Coin) getPrice(basePrice float64) float64 {
 }
 
 func main() {
-	binance := Exchange{
-		name:   "Binance",
-		baseWS: "fstream.binance.com",
-		coins:  map[string]*Coin{},
+	binance := Binance{
+		Exchange: Exchange{
+			name:   "Binance",
+			baseWS: "fstream.binance.com",
+			coins:  map[string]*Coin{},
+		},
 	}
-	mex := Exchange{
-		name:   "Mex",
-		baseWS: "contract.mexc.com",
-		coins:  map[string]*Coin{},
+	mex := Mex{
+		Exchange: Exchange{
+			name:   "Mex",
+			baseWS: "contract.mexc.com",
+			coins:  map[string]*Coin{},
+		},
 	}
 
 	binance.coins["btcusdt"] = &Coin{
@@ -196,7 +200,7 @@ func strategyPriceMeanDiffDirection(leadExchange ExchangeAvgMeanDiff, slowExchan
 	}
 }
 
-func (exch *Exchange) getAvgMeanDiff(c *Coin, aggr chan<- AvgMeanDiff) {
+func (exch *Binance) getAvgMeanDiff(c *Coin, aggr chan<- AvgMeanDiff) {
 	u := url.URL{
 		Scheme: "wss",
 		Host:   exch.baseWS,
@@ -263,7 +267,7 @@ func (exch *Exchange) getAvgMeanDiff(c *Coin, aggr chan<- AvgMeanDiff) {
 	}
 }
 
-func (exch *Exchange) getPrice(c *Coin, price chan<- PriceTime) {
+func (exch *Mex) getPrice(c *Coin, price chan<- PriceTime) {
 	u := url.URL{
 		Scheme: "wss",
 		Host:   exch.baseWS,

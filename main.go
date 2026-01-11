@@ -203,7 +203,7 @@ func (exch *Exchange) getAvgMeanDiff(c Coin, aggr chan<- AvgMeanDiff) {
 		if i > 0 {
 			trades = trades[i:]
 		}
-		fmt.Printf("%v:   Trades: %v", exch.name, len(trades))
+
 		if sumV == 0 {
 			continue
 		}

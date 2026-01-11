@@ -5,50 +5,91 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	_ "reflect"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
 
-const (
-	wsURL        = "wss://contract.mexc.com/edge"
-	symbol       = "BTC_USDT"
-	window       = 60 * time.Second
-	pingInterval = 15 * time.Second
-)
-
-// ─────────────── STRUCTS ───────────────
-
-type SubscribeDeal struct {
-	Method string `json:"method"`
-	Param  struct {
-		Symbol string `json:"symbol"`
-	} `json:"param"`
+func (exch Exchange) getCoin(coin string) (Coin, bool) {
+	res, ok := exch.coins[coin]
+	return res, ok
 }
 
-type PingMessage struct {
-	Method string `json:"method"`
+func (exch Exchange) getName() string {
+	return exch.name
 }
 
-type DealMessage struct {
-	Channel string `json:"channel"`
-	Data    []struct {
-		Price  float64 `json:"p"`
-		Volume float64 `json:"v"`
-		TimeMS int64   `json:"t"`
-	} `json:"data"`
+func (c Coin) getPrice(basePrice float64) float64 {
+	return basePrice * float64(c.multiplier)
 }
-
-type Trade struct {
-	Time   time.Time
-	Price  float64
-	Volume float64
-}
-
-// ─────────────── MAIN ───────────────
 
 func main() {
-	u, _ := url.Parse(wsURL)
+	binance := Exchange{
+		name:   "Binance",
+		baseWS: "fstream.binance.com",
+		coins:  map[string]Coin{},
+	}
+	mex := Exchange{
+		name:   "Mex",
+		baseWS: "contract.mexc.com",
+		coins:  map[string]Coin{},
+	}
+	binance.coins["btcusdt"] = Coin{symbol: "btcusdt", window: (60 * time.Second)}
+	binance.coins["shiba"] = Coin{symbol: "1000shibusdt", window: (60 * time.Second)}
+	mex.coins["btcusdt"] = Coin{symbol: "BTC_USDT", window: (60 * time.Second)}
+	mex.coins["shiba"] = Coin{symbol: "SHIB_USDT", multiplier: 1000, window: (60 * time.Second)}
+
+	go strategyPriceMeanDiffDirection(&binance, &mex, "btcusdt")
+	go strategyPriceMeanDiffDirection(&binance, &mex, "shiba")
+	for {
+		time.Sleep(1 * time.Second)
+	}
+}
+
+func strategyPriceMeanDiffDirection(leadExchange ExchangeAvgMeanDiff, slowExchange ExchangePrice, coinName string) {
+	leadExchCoin, ok := leadExchange.getCoin(coinName)
+	if !ok {
+		fmt.Println("Lead exchange doesn't has required coin")
+		return
+	}
+
+	slowExchCoin, ok := slowExchange.getCoin(coinName)
+	if !ok {
+		fmt.Println("Slow exchange doesn't has required coin")
+		return
+	}
+
+	leadAvgMeanDiffChannel := make(chan AvgMeanDiff)
+	leadPriceChannel := make(chan PriceTime)
+	go leadExchange.getAvgMeanDiff(leadExchCoin, leadAvgMeanDiffChannel)
+	go slowExchange.getPrice(slowExchCoin, leadPriceChannel)
+
+	AMD := AvgMeanDiff{}
+	PT := PriceTime{}
+	for {
+		select {
+		case res := <-leadAvgMeanDiffChannel:
+			AMD = res
+		case res := <-leadPriceChannel:
+			PT = res
+		}
+		if (AMD != AvgMeanDiff{} && PT != PriceTime{}) {
+			fmt.Println("=============================")
+			fmt.Printf("Strategy 1, coin %v\n", coinName)
+			fmt.Printf("Price %v - %v %v\n", leadExchange.getName(), slowExchange.getName(), leadExchCoin.getPrice(AMD.Prc)-slowExchCoin.getPrice(PT.Price))
+			fmt.Printf("%v diff %v\n", leadExchange.getName(), AMD.Diff)
+		}
+	}
+}
+
+func (exch *Exchange) getAvgMeanDiff(c Coin, aggr chan<- AvgMeanDiff) {
+	u := url.URL{
+		Scheme: "wss",
+		Host:   exch.baseWS,
+		Path:   "/ws/" + c.symbol + "@aggTrade",
+	}
 
 	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
@@ -56,20 +97,10 @@ func main() {
 	}
 	defer conn.Close()
 
-	// Subscribe to deals
-	sub := SubscribeDeal{Method: "sub.deal"}
-	sub.Param.Symbol = symbol
-
-	if err := conn.WriteJSON(sub); err != nil {
-		log.Fatal("Subscribe error:", err)
-	}
-
-	fmt.Println("Subscribed to deal stream:", symbol)
-
-	// Ping loop
-	go pingLoop(conn)
+	// fmt.Printf("Connected to %v aggTrade: %v\n", exch.name, c.symbol)
 
 	var trades []Trade
+	var sumPV, sumV float64
 
 	for {
 		_, msg, err := conn.ReadMessage()
@@ -77,50 +108,32 @@ func main() {
 			log.Fatal("Read error:", err)
 		}
 
-		var base map[string]interface{}
-		if err := json.Unmarshal(msg, &base); err != nil {
+		var agg AggTrade
+		if err := json.Unmarshal(msg, &agg); err != nil {
 			continue
 		}
 
-		if base["channel"] == "pong" {
-			continue
+		price, _ := strconv.ParseFloat(agg.Price, 64)
+		qty, _ := strconv.ParseFloat(agg.Qty, 64)
+		t := time.UnixMilli(agg.TradeTime)
+
+		trades = append(trades, Trade{
+			Time:   t,
+			Price:  price,
+			Volume: qty,
+		})
+		sumPV += price * qty
+		sumV += qty
+
+		cutoff := time.Now().Add(-c.window)
+		i := 0
+		for i < len(trades) && !trades[i].Time.After(cutoff) {
+			sumPV -= trades[i].Price * trades[i].Volume
+			sumV -= trades[i].Volume
+			i++
 		}
-
-		if base["channel"] != "push.deal" {
-			continue
-		}
-
-		var deal DealMessage
-		if err := json.Unmarshal(msg, &deal); err != nil {
-			continue
-		}
-
-		now := time.Now()
-		cutoff := now.Add(-window)
-
-		// Add new trades
-		for _, d := range deal.Data {
-			trades = append(trades, Trade{
-				Time:   time.UnixMilli(d.TimeMS),
-				Price:  d.Price,
-				Volume: d.Volume,
-			})
-		}
-
-		// Remove expired trades
-		filtered := trades[:0]
-		for _, t := range trades {
-			if t.Time.After(cutoff) {
-				filtered = append(filtered, t)
-			}
-		}
-		trades = filtered
-
-		// Calculate VWAP
-		var sumPV, sumV float64
-		for _, t := range trades {
-			sumPV += t.Price * t.Volume
-			sumV += t.Volume
+		if i > 0 {
+			trades = trades[i:]
 		}
 
 		if sumV == 0 {
@@ -128,26 +141,67 @@ func main() {
 		}
 
 		vwap := sumPV / sumV
+		dif := vwap - price
+		aggregation := AvgMeanDiff{
+			Avg:  vwap,
+			Diff: dif,
+			Prc:  price,
+			Time: time.Now(),
+		}
 
-		fmt.Printf(
-			"%s | Trades: %d | VWAP(1m): %.4f\n",
-			now.Format("15:04:05.000"),
-			len(trades),
-			vwap,
-		)
+		aggr <- aggregation
 	}
 }
 
-// ─────────────── PING ───────────────
+func (exch *Exchange) getPrice(c Coin, price chan<- PriceTime) {
+	u := url.URL{
+		Scheme: "wss",
+		Host:   exch.baseWS,
+		Path:   "edge",
+	}
 
-func pingLoop(conn *websocket.Conn) {
-	ticker := time.NewTicker(pingInterval)
-	defer ticker.Stop()
+	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	if err != nil {
+		log.Fatal("MEXC WS error:", err)
+	}
+	defer conn.Close()
 
-	for range ticker.C {
-		if err := conn.WriteJSON(PingMessage{Method: "ping"}); err != nil {
-			log.Println("Ping failed:", err)
+	// Subscribe
+	sub := map[string]any{
+		"method": "sub.kline",
+		"param": map[string]string{
+			"symbol":   c.symbol,
+			"interval": "Min1",
+		},
+		"gzip": false,
+	}
+	conn.WriteJSON(sub)
+
+	// Ping loop
+	go func() {
+		for {
+			time.Sleep(15 * time.Second)
+			conn.WriteJSON(map[string]string{"method": "ping"})
+		}
+	}()
+
+	for {
+		_, msg, err := conn.ReadMessage()
+		if err != nil {
 			return
+		}
+
+		var m MexcMsg
+		if err := json.Unmarshal(msg, &m); err != nil {
+			continue
+		}
+
+		if m.Channel == "push.kline" {
+			res := PriceTime{
+				Price: m.Data.Close,
+				Time:  time.Now(),
+			}
+			price <- res
 		}
 	}
 }

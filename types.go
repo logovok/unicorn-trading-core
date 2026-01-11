@@ -8,6 +8,14 @@ type Exchange struct {
 	coins  map[string]*Coin
 }
 
+type Binance struct {
+	Exchange
+}
+
+type Mex struct {
+	Exchange
+}
+
 type Coin struct {
 	symbol     string
 	multiplier int64 `default:"1"`

@@ -12,9 +12,39 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func (exch Exchange) getCoin(coin string) (Coin, bool) {
+func (exch Exchange) getCoin(coin string) (*Coin, bool) {
 	res, ok := exch.coins[coin]
 	return res, ok
+}
+
+func enableCoinAVG(exch ExchangeAvgMeanDiff, coin string) {
+	ch := make(chan AvgMeanDiff)
+	c, ok := exch.getCoin(coin)
+	if !ok {
+		log.Panicf("Coin: %v doesn't exist for an Exchage: %v\n", coin, exch.getName())
+	}
+	if c.data.avg == nil {
+		c.data.avg = NewDataDistributor(ch)
+		go exch.getAvgMeanDiff(c, ch)
+		go c.data.avg.Run()
+	} else {
+		fmt.Printf("Coin AVG already enabled for %v on Exchange: %v\n", coin, exch.getName())
+	}
+}
+
+func enableCoinPrice(exch ExchangePrice, coin string) {
+	ch := make(chan PriceTime)
+	c, ok := exch.getCoin(coin)
+	if !ok {
+		log.Panicf("Coin: %v doesn't exist for an Exchage: %v\n", coin, exch.getName())
+	}
+	if c.data.price == nil {
+		c.data.price = NewDataDistributor(ch)
+		go exch.getPrice(c, ch)
+		go c.data.price.Run()
+	} else {
+		fmt.Printf("Coin price already enabled for %v on Exchange: %v\n", coin, exch.getName())
+	}
 }
 
 func (exch Exchange) getName() string {
@@ -29,17 +59,42 @@ func main() {
 	binance := Exchange{
 		name:   "Binance",
 		baseWS: "fstream.binance.com",
-		coins:  map[string]Coin{},
+		coins:  map[string]*Coin{},
 	}
 	mex := Exchange{
 		name:   "Mex",
 		baseWS: "contract.mexc.com",
-		coins:  map[string]Coin{},
+		coins:  map[string]*Coin{},
 	}
-	binance.coins["btcusdt"] = Coin{symbol: "btcusdt", window: (60 * time.Second)}
-	binance.coins["shiba"] = Coin{symbol: "1000shibusdt", window: (60 * time.Second)}
-	mex.coins["btcusdt"] = Coin{symbol: "BTC_USDT", window: (60 * time.Second)}
-	mex.coins["shiba"] = Coin{symbol: "SHIB_USDT", multiplier: 1000, window: (60 * time.Second)}
+
+	binance.coins["btcusdt"] = &Coin{
+		symbol: "btcusdt",
+		window: (60 * time.Second),
+		data:   &CoinData{},
+	}
+	enableCoinAVG(&binance, "btcusdt")
+
+	binance.coins["shiba"] = &Coin{
+		symbol: "1000shibusdt",
+		window: (60 * time.Second),
+		data:   &CoinData{},
+	}
+	enableCoinAVG(&binance, "shiba")
+
+	mex.coins["btcusdt"] = &Coin{
+		symbol: "BTC_USDT",
+		window: (60 * time.Second),
+		data:   &CoinData{},
+	}
+	enableCoinPrice(&mex, "btcusdt")
+
+	mex.coins["shiba"] = &Coin{
+		symbol:     "SHIB_USDT",
+		multiplier: 1000,
+		window:     (60 * time.Second),
+		data:       &CoinData{},
+	}
+	enableCoinPrice(&mex, "shiba")
 
 	go strategyPriceMeanDiffDirection(&binance, &mex, "btcusdt")
 	go strategyPriceMeanDiffDirection(&binance, &mex, "shiba")
@@ -61,10 +116,15 @@ func strategyPriceMeanDiffDirection(leadExchange ExchangeAvgMeanDiff, slowExchan
 		return
 	}
 
-	leadAvgMeanDiffChannel := make(chan AvgMeanDiff)
-	leadPriceChannel := make(chan PriceTime)
-	go leadExchange.getAvgMeanDiff(leadExchCoin, leadAvgMeanDiffChannel)
-	go slowExchange.getPrice(slowExchCoin, leadPriceChannel)
+	if leadExchCoin.data.avg == nil || slowExchCoin.data.price == nil {
+		time.Sleep(time.Second)
+		if leadExchCoin.data.avg == nil || slowExchCoin.data.price == nil {
+			log.Panicln("Coin data distribution stream not initialized")
+		}
+	}
+
+	leadAvgMeanDiffChannel := leadExchCoin.data.avg.Subscribe()
+	slowPriceChannel := slowExchCoin.data.price.Subscribe()
 
 	AMD := AvgMeanDiff{}
 	PT := PriceTime{}
@@ -72,7 +132,7 @@ func strategyPriceMeanDiffDirection(leadExchange ExchangeAvgMeanDiff, slowExchan
 		select {
 		case res := <-leadAvgMeanDiffChannel:
 			AMD = res
-		case res := <-leadPriceChannel:
+		case res := <-slowPriceChannel:
 			PT = res
 		}
 		if (AMD != AvgMeanDiff{} && PT != PriceTime{}) {
@@ -84,7 +144,7 @@ func strategyPriceMeanDiffDirection(leadExchange ExchangeAvgMeanDiff, slowExchan
 	}
 }
 
-func (exch *Exchange) getAvgMeanDiff(c Coin, aggr chan<- AvgMeanDiff) {
+func (exch *Exchange) getAvgMeanDiff(c *Coin, aggr chan<- AvgMeanDiff) {
 	u := url.URL{
 		Scheme: "wss",
 		Host:   exch.baseWS,
@@ -96,8 +156,6 @@ func (exch *Exchange) getAvgMeanDiff(c Coin, aggr chan<- AvgMeanDiff) {
 		log.Fatal("WS error:", err)
 	}
 	defer conn.Close()
-
-	// fmt.Printf("Connected to %v aggTrade: %v\n", exch.name, c.symbol)
 
 	var trades []Trade
 	var sumPV, sumV float64
@@ -153,7 +211,7 @@ func (exch *Exchange) getAvgMeanDiff(c Coin, aggr chan<- AvgMeanDiff) {
 	}
 }
 
-func (exch *Exchange) getPrice(c Coin, price chan<- PriceTime) {
+func (exch *Exchange) getPrice(c *Coin, price chan<- PriceTime) {
 	u := url.URL{
 		Scheme: "wss",
 		Host:   exch.baseWS,
@@ -166,7 +224,6 @@ func (exch *Exchange) getPrice(c Coin, price chan<- PriceTime) {
 	}
 	defer conn.Close()
 
-	// Subscribe
 	sub := map[string]any{
 		"method": "sub.kline",
 		"param": map[string]string{
@@ -177,7 +234,6 @@ func (exch *Exchange) getPrice(c Coin, price chan<- PriceTime) {
 	}
 	conn.WriteJSON(sub)
 
-	// Ping loop
 	go func() {
 		for {
 			time.Sleep(15 * time.Second)

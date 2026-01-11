@@ -168,6 +168,7 @@ func (exch *Exchange) getAvgMeanDiff(c Coin, aggr chan<- AvgMeanDiff) {
 	// fmt.Printf("Connected to %v aggTrade: %v\n", exch.name, c.symbol)
 
 	var trades []Trade
+	var sumPV, sumV float64
 
 	for {
 		_, msg, err := conn.ReadMessage()
@@ -189,22 +190,18 @@ func (exch *Exchange) getAvgMeanDiff(c Coin, aggr chan<- AvgMeanDiff) {
 			Price:  price,
 			Volume: qty,
 		})
+		sumPV += price * qty
+		sumV += qty
 
-		// Remove expired trades
 		cutoff := time.Now().Add(-c.window)
-		filtered := trades[:0]
-		for _, tr := range trades {
-			if tr.Time.After(cutoff) {
-				filtered = append(filtered, tr)
-			}
+		i := 0
+		for i < len(trades) && !trades[i].Time.After(cutoff) {
+			sumPV -= trades[i].Price * trades[i].Volume
+			sumV -= trades[i].Volume
+			i++
 		}
-		trades = filtered
-
-		// Calculate VWAP
-		var sumPV, sumV float64
-		for _, tr := range trades {
-			sumPV += tr.Price * tr.Volume
-			sumV += tr.Volume
+		if i > 0 {
+			trades = trades[i:]
 		}
 
 		if sumV == 0 {

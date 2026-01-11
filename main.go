@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"net/url"
 	_ "reflect"
 	"strconv"
@@ -11,6 +12,11 @@ import (
 
 	"github.com/gorilla/websocket"
 )
+
+var config = Config{
+	orderTimeout: time.Millisecond * 15000,
+	orderVolume:  10,
+}
 
 func (exch Exchange) getCoin(coin string) (*Coin, bool) {
 	res, ok := exch.coins[coin]
@@ -75,6 +81,9 @@ func main() {
 		symbol: "btcusdt",
 		window: (60 * time.Second),
 		data:   &CoinData{},
+		thresholds: Thresholds{
+			diffThreshold: 1,
+		},
 	}
 	enableCoinAVG(&binance, "btcusdt")
 
@@ -82,6 +91,9 @@ func main() {
 		symbol: "1000shibusdt",
 		window: (60 * time.Second),
 		data:   &CoinData{},
+		thresholds: Thresholds{
+			diffThreshold: 0.00001,
+		},
 	}
 	enableCoinAVG(&binance, "shiba")
 
@@ -89,6 +101,9 @@ func main() {
 		symbol: "BTC_USDT",
 		window: (60 * time.Second),
 		data:   &CoinData{},
+		thresholds: Thresholds{
+			crossExchangePriceThreshold: 1,
+		},
 	}
 	enableCoinPrice(&mex, "btcusdt")
 
@@ -97,17 +112,25 @@ func main() {
 		multiplier: 1000,
 		window:     (60 * time.Second),
 		data:       &CoinData{},
+		thresholds: Thresholds{
+			crossExchangePriceThreshold: 0.00001,
+		},
 	}
 	enableCoinPrice(&mex, "shiba")
 
-	go strategyPriceMeanDiffDirection(&binance, &mex, "btcusdt")
-	go strategyPriceMeanDiffDirection(&binance, &mex, "shiba")
+	orderDistributor := OrderDistributor{ch: make(chan Order)}
+
+	go strategyPriceMeanDiffDirection(&binance, &mex, "btcusdt", orderDistributor.ch)
+	go strategyPriceMeanDiffDirection(&binance, &mex, "shiba", orderDistributor.ch)
+
+	log.Println("Bot started successfully")
 	for {
 		time.Sleep(1 * time.Second)
 	}
+
 }
 
-func strategyPriceMeanDiffDirection(leadExchange ExchangeAvgMeanDiff, slowExchange ExchangePrice, coinName string) {
+func strategyPriceMeanDiffDirection(leadExchange ExchangeAvgMeanDiff, slowExchange ExchangePrice, coinName string, orderChan chan<- Order) {
 	leadExchCoin, ok := leadExchange.getCoin(coinName)
 	if !ok {
 		fmt.Println("Lead exchange doesn't has required coin")
@@ -140,10 +163,39 @@ func strategyPriceMeanDiffDirection(leadExchange ExchangeAvgMeanDiff, slowExchan
 			PT = res
 		}
 		if (AMD != AvgMeanDiff{} && PT != PriceTime{}) {
-			fmt.Println("=============================")
-			fmt.Printf("Strategy 1, coin %v\n", coinName)
-			fmt.Printf("Price %v - %v %v\n", leadExchange.getName(), slowExchange.getName(), leadExchCoin.getPrice(AMD.Prc)-slowExchCoin.getPrice(PT.Price))
-			fmt.Printf("%v diff %v\n", leadExchange.getName(), AMD.Diff)
+			//fmt.Println("=============================")
+			//fmt.Printf("Strategy 1, coin %v\n", coinName)
+			//fmt.Printf("Price %v - %v %v\n", leadExchange.getName(), slowExchange.getName(), leadExchCoin.getPrice(AMD.Prc)-slowExchCoin.getPrice(PT.Price))
+			//fmt.Printf("%v diff %v\n", leadExchange.getName(), AMD.Diff)
+
+			isUpDirect := AMD.Diff < 0
+			isDiffOK := math.Abs(AMD.Diff) >= leadExchCoin.thresholds.diffThreshold
+			if !isDiffOK {
+				continue
+			}
+
+			diffExchanges := math.Abs(AMD.Prc - PT.Price)
+			isCrossExchangePriceOK := diffExchanges >= slowExchCoin.thresholds.crossExchangePriceThreshold
+			if !isCrossExchangePriceOK {
+				continue
+			}
+
+			dealTimeout := config.orderTimeout
+			volume := config.orderVolume
+			priceStart := PT.Price
+			priceClose := PT.Price - AMD.Diff
+			priceAbort := PT.Price
+
+			order := Order{
+				coin:        slowExchCoin,
+				isUpDirect:  isUpDirect,
+				dealTimeout: dealTimeout,
+				volume:      volume,
+				priceStart:  priceStart,
+				priceClose:  priceClose,
+				priceAbort:  priceAbort,
+			}
+			orderChan <- order
 		}
 	}
 }

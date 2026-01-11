@@ -2,10 +2,20 @@ package main
 
 import "time"
 
+type Config struct {
+	orderTimeout time.Duration
+	orderVolume  float64
+}
+
 type Exchange struct {
 	name   string
 	baseWS string
 	coins  map[string]*Coin
+}
+
+type Thresholds struct {
+	diffThreshold               float64
+	crossExchangePriceThreshold float64
 }
 
 type Binance struct {
@@ -21,6 +31,7 @@ type Coin struct {
 	multiplier int64 `default:"1"`
 	window     time.Duration
 	data       *CoinData
+	thresholds Thresholds
 }
 
 type CoinData struct {
@@ -60,6 +71,16 @@ type MexcMsg struct {
 	Data    struct {
 		Close float64 `json:"c"`
 	} `json:"data"`
+}
+
+type Order struct {
+	coin        *Coin
+	isUpDirect  bool
+	dealTimeout time.Duration
+	volume      float64
+	priceStart  float64
+	priceClose  float64
+	priceAbort  float64
 }
 
 type ExchangeBase interface {

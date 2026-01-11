@@ -111,10 +111,8 @@ func strategyPriceMeanDiffDirection(leadExchange ExchangeAvgMeanDiff, slowExchan
 		select {
 		case res := <-leadAvgMeanDiffChannel:
 			AMD = res
-			fmt.Println("AMD")
 		case res := <-slowPriceChannel:
 			PT = res
-			fmt.Println("PT")
 		}
 		if (AMD != AvgMeanDiff{} && PT != PriceTime{}) {
 			fmt.Println("=============================")

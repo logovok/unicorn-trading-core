@@ -5,13 +5,19 @@ import "time"
 type Exchange struct {
 	name   string
 	baseWS string
-	coins  map[string]Coin
+	coins  map[string]*Coin
 }
 
 type Coin struct {
 	symbol     string
 	multiplier int64 `default:"1"`
 	window     time.Duration
+	data       *CoinData
+}
+
+type CoinData struct {
+	price Distributor[PriceTime]
+	avg   Distributor[AvgMeanDiff]
 }
 
 type AggTrade struct {
@@ -49,16 +55,16 @@ type MexcMsg struct {
 }
 
 type ExchangeBase interface {
-	getCoin(coin string) (Coin, bool)
+	getCoin(coin string) (*Coin, bool)
 	getName() string
 }
 
 type ExchangeAvgMeanDiff interface {
 	ExchangeBase
-	getAvgMeanDiff(c Coin, aggr chan<- AvgMeanDiff)
+	getAvgMeanDiff(c *Coin, aggr chan<- AvgMeanDiff)
 }
 
 type ExchangePrice interface {
 	ExchangeBase
-	getPrice(c Coin, price chan<- PriceTime)
+	getPrice(c *Coin, price chan<- PriceTime)
 }

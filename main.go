@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	_ "reflect"
 	"strconv"
 	"time"
 
@@ -28,16 +29,12 @@ func (exch Exchange) getName() string {
 
 type Coin struct {
 	symbol     string
-	multiplyer int64
+	multiplier int64 `default:"1"`
 	window     time.Duration
 }
 
 func (c Coin) getPrice(basePrice float64) float64 {
-	if c.multiplyer != 0 {
-		return basePrice * float64(c.multiplyer)
-	} else {
-		return basePrice
-	}
+	return basePrice * float64(c.multiplier)
 }
 
 // ─────────────── STRUCTS ───────────────
@@ -92,7 +89,7 @@ func main() {
 	binance.coins["btcusdt"] = Coin{symbol: "btcusdt", window: (60 * time.Second)}
 	binance.coins["shiba"] = Coin{symbol: "1000shibusdt", window: (60 * time.Second)}
 	mex.coins["btcusdt"] = Coin{symbol: "BTC_USDT", window: (60 * time.Second)}
-	mex.coins["shiba"] = Coin{symbol: "SHIB_USDT", multiplyer: 1000, window: (60 * time.Second)}
+	mex.coins["shiba"] = Coin{symbol: "SHIB_USDT", multiplier: 1000, window: (60 * time.Second)}
 
 	go strategyPriceMeanDiffDirection(&binance, &mex, "btcusdt")
 	go strategyPriceMeanDiffDirection(&binance, &mex, "shiba")

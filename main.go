@@ -36,10 +36,51 @@ func main() {
 		baseWS: "contract.mexc.com",
 		coins:  map[string]Coin{},
 	}
-	binance.coins["btcusdt"] = Coin{symbol: "btcusdt", window: (60 * time.Second)}
-	binance.coins["shiba"] = Coin{symbol: "1000shibusdt", window: (60 * time.Second)}
-	mex.coins["btcusdt"] = Coin{symbol: "BTC_USDT", window: (60 * time.Second)}
-	mex.coins["shiba"] = Coin{symbol: "SHIB_USDT", multiplier: 1000, window: (60 * time.Second)}
+
+	avgChan := make(chan AvgMeanDiff)
+	binance.coins["btcusdt"] = Coin{
+		symbol: "btcusdt",
+		window: (60 * time.Second),
+		data: CoinData{
+			avg: NewDataDistributor(avgChan),
+		},
+	}
+	go binance.getAvgMeanDiff(binance.coins["btcusdt"], avgChan)
+	go binance.coins["btcusdt"].data.avg.Run()
+
+	avgChan = make(chan AvgMeanDiff)
+	binance.coins["shiba"] = Coin{
+		symbol: "1000shibusdt",
+		window: (60 * time.Second),
+		data: CoinData{
+			avg: NewDataDistributor(avgChan),
+		},
+	}
+	go binance.getAvgMeanDiff(binance.coins["shiba"], avgChan)
+	go binance.coins["shiba"].data.avg.Run()
+
+	prcChan := make(chan PriceTime)
+	mex.coins["btcusdt"] = Coin{
+		symbol: "BTC_USDT",
+		window: (60 * time.Second),
+		data: CoinData{
+			price: NewDataDistributor(prcChan),
+		},
+	}
+	go mex.getPrice(mex.coins["btcusdt"], prcChan)
+	go mex.coins["btcusdt"].data.price.Run()
+
+	prcChan = make(chan PriceTime)
+	mex.coins["shiba"] = Coin{
+		symbol:     "SHIB_USDT",
+		multiplier: 1000,
+		window:     (60 * time.Second),
+		data: CoinData{
+			price: NewDataDistributor(prcChan),
+		},
+	}
+	go mex.getPrice(mex.coins["shiba"], prcChan)
+	go mex.coins["shiba"].data.price.Run()
 
 	go strategyPriceMeanDiffDirection(&binance, &mex, "btcusdt")
 	go strategyPriceMeanDiffDirection(&binance, &mex, "shiba")
@@ -61,10 +102,8 @@ func strategyPriceMeanDiffDirection(leadExchange ExchangeAvgMeanDiff, slowExchan
 		return
 	}
 
-	leadAvgMeanDiffChannel := make(chan AvgMeanDiff)
-	leadPriceChannel := make(chan PriceTime)
-	go leadExchange.getAvgMeanDiff(leadExchCoin, leadAvgMeanDiffChannel)
-	go slowExchange.getPrice(slowExchCoin, leadPriceChannel)
+	leadAvgMeanDiffChannel := leadExchCoin.data.avg.Subscribe()
+	slowPriceChannel := slowExchCoin.data.price.Subscribe()
 
 	AMD := AvgMeanDiff{}
 	PT := PriceTime{}
@@ -72,8 +111,10 @@ func strategyPriceMeanDiffDirection(leadExchange ExchangeAvgMeanDiff, slowExchan
 		select {
 		case res := <-leadAvgMeanDiffChannel:
 			AMD = res
-		case res := <-leadPriceChannel:
+			fmt.Println("AMD")
+		case res := <-slowPriceChannel:
 			PT = res
+			fmt.Println("PT")
 		}
 		if (AMD != AvgMeanDiff{} && PT != PriceTime{}) {
 			fmt.Println("=============================")
@@ -96,8 +137,6 @@ func (exch *Exchange) getAvgMeanDiff(c Coin, aggr chan<- AvgMeanDiff) {
 		log.Fatal("WS error:", err)
 	}
 	defer conn.Close()
-
-	// fmt.Printf("Connected to %v aggTrade: %v\n", exch.name, c.symbol)
 
 	var trades []Trade
 	var sumPV, sumV float64
@@ -166,7 +205,6 @@ func (exch *Exchange) getPrice(c Coin, price chan<- PriceTime) {
 	}
 	defer conn.Close()
 
-	// Subscribe
 	sub := map[string]any{
 		"method": "sub.kline",
 		"param": map[string]string{
@@ -177,7 +215,6 @@ func (exch *Exchange) getPrice(c Coin, price chan<- PriceTime) {
 	}
 	conn.WriteJSON(sub)
 
-	// Ping loop
 	go func() {
 		for {
 			time.Sleep(15 * time.Second)

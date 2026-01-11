@@ -12,6 +12,12 @@ type Coin struct {
 	symbol     string
 	multiplier int64 `default:"1"`
 	window     time.Duration
+	data       CoinData
+}
+
+type CoinData struct {
+	price Distributor[PriceTime]
+	avg   Distributor[AvgMeanDiff]
 }
 
 type AggTrade struct {

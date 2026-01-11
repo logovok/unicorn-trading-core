@@ -12,12 +12,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type Exchange struct {
-	name   string
-	baseWS string
-	coins  map[string]Coin
-}
-
 func (exch Exchange) getCoin(coin string) (Coin, bool) {
 	res, ok := exch.coins[coin]
 	return res, ok
@@ -27,53 +21,9 @@ func (exch Exchange) getName() string {
 	return exch.name
 }
 
-type Coin struct {
-	symbol     string
-	multiplier int64 `default:"1"`
-	window     time.Duration
-}
-
 func (c Coin) getPrice(basePrice float64) float64 {
 	return basePrice * float64(c.multiplier)
 }
-
-// ─────────────── STRUCTS ───────────────
-
-type AggTrade struct {
-	EventType string `json:"e"`
-	EventTime int64  `json:"E"`
-	Symbol    string `json:"s"`
-	Price     string `json:"p"`
-	Qty       string `json:"q"`
-	TradeTime int64  `json:"T"`
-}
-
-type Trade struct {
-	Time   time.Time
-	Price  float64
-	Volume float64
-}
-
-type AvgMeanDiff struct {
-	Avg  float64   `json:"avg"`
-	Diff float64   `json:"diff"`
-	Prc  float64   `json:"prc"`
-	Time time.Time `json:"time"`
-}
-
-type PriceTime struct {
-	Price float64   `json:"price"`
-	Time  time.Time `json:"time"`
-}
-
-type MexcMsg struct {
-	Channel string `json:"channel"`
-	Data    struct {
-		Close float64 `json:"c"`
-	} `json:"data"`
-}
-
-// ─────────────── MAIN ───────────────
 
 func main() {
 	binance := Exchange{
@@ -96,21 +46,6 @@ func main() {
 	for {
 		time.Sleep(1 * time.Second)
 	}
-}
-
-type ExchangeBase interface {
-	getCoin(coin string) (Coin, bool)
-	getName() string
-}
-
-type ExchangeAvgMeanDiff interface {
-	ExchangeBase
-	getAvgMeanDiff(c Coin, aggr chan<- AvgMeanDiff)
-}
-
-type ExchangePrice interface {
-	ExchangeBase
-	getPrice(c Coin, price chan<- PriceTime)
 }
 
 func strategyPriceMeanDiffDirection(leadExchange ExchangeAvgMeanDiff, slowExchange ExchangePrice, coinName string) {

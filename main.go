@@ -25,7 +25,11 @@ func (c Coin) getPrice(basePrice float64) float64 {
 	return basePrice * float64(c.multiplier)
 }
 
+var metrics *RemoteWriter
+
 func main() {
+	metrics = NewRemoteWriter()
+
 	binance := Exchange{
 		name:   "Binance",
 		baseWS: "fstream.binance.com",
@@ -80,6 +84,30 @@ func strategyPriceMeanDiffDirection(leadExchange ExchangeAvgMeanDiff, slowExchan
 			fmt.Printf("Strategy 1, coin %v\n", coinName)
 			fmt.Printf("Price %v - %v %v\n", leadExchange.getName(), slowExchange.getName(), leadExchCoin.getPrice(AMD.Prc)-slowExchCoin.getPrice(PT.Price))
 			fmt.Printf("%v diff %v\n", leadExchange.getName(), AMD.Diff)
+
+			priceDiff := leadExchCoin.getPrice(AMD.Prc) -
+				slowExchCoin.getPrice(PT.Price)
+
+			// Price difference metric
+			_ = metrics.Push(
+				"arb_price_diff",
+				priceDiff,
+				map[string]string{
+					"coin":          coinName,
+					"lead_exchange": leadExchange.getName(),
+					"slow_exchange": slowExchange.getName(),
+				},
+			)
+
+			// VWAP diff metric
+			_ = metrics.Push(
+				"arb_vwap_mean_diff",
+				AMD.Diff,
+				map[string]string{
+					"coin":     coinName,
+					"exchange": leadExchange.getName(),
+				},
+			)
 		}
 	}
 }

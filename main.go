@@ -119,6 +119,7 @@ func main() {
 	enableCoinPrice(&mex, "shiba")
 
 	orderDistributor := OrderDistributor{ch: make(chan Order)}
+	go orderDistributor.Run()
 
 	go strategyPriceMeanDiffDirection(&binance, &mex, "btcusdt", orderDistributor.ch)
 	go strategyPriceMeanDiffDirection(&binance, &mex, "shiba", orderDistributor.ch)

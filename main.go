@@ -92,7 +92,7 @@ func main() {
 		window: (60 * time.Second),
 		data:   &CoinData{},
 		thresholds: Thresholds{
-			diffThreshold: 0.00001,
+			diffThreshold: 0.000001,
 		},
 	}
 	enableCoinAVG(&binance, "shiba")
@@ -113,7 +113,7 @@ func main() {
 		window:     (60 * time.Second),
 		data:       &CoinData{},
 		thresholds: Thresholds{
-			crossExchangePriceThreshold: 0.00001,
+			crossExchangePriceThreshold: 0.000001,
 		},
 	}
 	enableCoinPrice(&mex, "shiba")
@@ -121,7 +121,7 @@ func main() {
 	orderDistributor := OrderDistributor{ch: make(chan Order)}
 	go orderDistributor.Run()
 
-	go strategyPriceMeanDiffDirection(&binance, &mex, "btcusdt", orderDistributor.ch)
+	//go strategyPriceMeanDiffDirection(&binance, &mex, "btcusdt", orderDistributor.ch)
 	go strategyPriceMeanDiffDirection(&binance, &mex, "shiba", orderDistributor.ch)
 
 	log.Println("Bot started successfully")
@@ -175,8 +175,8 @@ func strategyPriceMeanDiffDirection(leadExchange ExchangeAvgMeanDiff, slowExchan
 				continue
 			}
 
-			diffExchanges := math.Abs(AMD.Prc - PT.Price)
-			isCrossExchangePriceOK := diffExchanges >= slowExchCoin.thresholds.crossExchangePriceThreshold
+			diffExchanges := math.Abs(leadExchCoin.getPrice(AMD.Prc) - slowExchCoin.getPrice(PT.Price))
+			isCrossExchangePriceOK := diffExchanges >= slowExchCoin.getPrice(slowExchCoin.thresholds.crossExchangePriceThreshold)
 			if !isCrossExchangePriceOK {
 				continue
 			}
@@ -184,7 +184,7 @@ func strategyPriceMeanDiffDirection(leadExchange ExchangeAvgMeanDiff, slowExchan
 			dealTimeout := config.orderTimeout
 			volume := config.orderVolume
 			priceStart := PT.Price
-			priceClose := PT.Price - AMD.Diff
+			priceClose := PT.Price - AMD.Diff/float64(slowExchCoin.multiplier)
 			priceAbort := PT.Price
 
 			order := Order{

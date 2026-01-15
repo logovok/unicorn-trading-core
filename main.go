@@ -184,7 +184,7 @@ func strategyPriceMeanDiffDirection(leadExchange ExchangeAvgMeanDiff, slowExchan
 			dealTimeout := config.orderTimeout
 			volume := config.orderVolume
 			priceStart := PT.Price
-			priceClose := PT.Price - AMD.Diff/float64(slowExchCoin.multiplier)
+			priceClose := PT.Price - AMD.Diff/slowExchCoin.multiplier
 			priceAbort := PT.Price
 
 			order := Order{

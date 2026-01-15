@@ -27,8 +27,9 @@ type Mex struct {
 }
 
 type Coin struct {
-	symbol     string
-	multiplier int64 `default:"1"`
+	symbol string
+	// leading exchange price / multiplier = current exchange price
+	multiplier float64 `default:"1.0"`
 	window     time.Duration
 	data       *CoinData
 	thresholds Thresholds

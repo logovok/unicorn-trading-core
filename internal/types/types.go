@@ -1,21 +1,29 @@
-package main
+package types
 
-import "time"
+import (
+	"time"
+	"trading/core/internal/distributors"
+)
+
+var AppConfig = Config{
+	OrderTimeout: time.Millisecond * 15000,
+	OrderVolume:  10,
+}
 
 type Config struct {
-	orderTimeout time.Duration
-	orderVolume  float64
+	OrderTimeout time.Duration
+	OrderVolume  float64
 }
 
 type Exchange struct {
-	name   string
-	baseWS string
-	coins  map[string]*Coin
+	Name   string
+	BaseWS string
+	Coins  map[string]*Coin
 }
 
 type Thresholds struct {
-	diffThreshold               float64
-	crossExchangePriceThreshold float64
+	DiffThreshold               float64
+	CrossExchangePriceThreshold float64
 }
 
 type Binance struct {
@@ -27,17 +35,17 @@ type Mex struct {
 }
 
 type Coin struct {
-	symbol string
-	// leading exchange price / multiplier = current exchange price
-	multiplier float64 `default:"1.0"`
-	window     time.Duration
-	data       *CoinData
-	thresholds Thresholds
+	Symbol string
+	// leading exchange price / Multiplier = current exchange price
+	Multiplier float64 `default:"1.0"`
+	Window     time.Duration
+	Data       *CoinData
+	Thresholds Thresholds
 }
 
 type CoinData struct {
-	price Distributor[PriceTime]
-	avg   Distributor[AvgMeanDiff]
+	Price distributors.Distributor[PriceTime]
+	Avg   distributors.Distributor[AvgMeanDiff]
 }
 
 type AggTrade struct {
@@ -75,26 +83,26 @@ type MexcMsg struct {
 }
 
 type Order struct {
-	coin        *Coin
-	isUpDirect  bool
-	dealTimeout time.Duration
-	volume      float64
-	priceStart  float64
-	priceClose  float64
-	priceAbort  float64
+	Coin        *Coin
+	IsUpDirect  bool
+	DealTimeout time.Duration
+	Volume      float64
+	PriceStart  float64
+	PriceClose  float64
+	PriceAbort  float64
 }
 
 type ExchangeBase interface {
-	getCoin(coin string) (*Coin, bool)
-	getName() string
+	GetCoin(coin string) (*Coin, bool)
+	GetName() string
 }
 
 type ExchangeAvgMeanDiff interface {
 	ExchangeBase
-	getAvgMeanDiff(c *Coin, aggr chan<- AvgMeanDiff)
+	GetAvgMeanDiff(c *Coin, aggr chan<- AvgMeanDiff)
 }
 
 type ExchangePrice interface {
 	ExchangeBase
-	getPrice(c *Coin, price chan<- PriceTime)
+	GetPrice(c *Coin, price chan<- PriceTime)
 }

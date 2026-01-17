@@ -41,12 +41,8 @@ func StrategyPriceMeanDiffDirection(leadExchange types.ExchangeAvgMeanDiff, slow
 		case res := <-slowPriceChannel:
 			PT = res
 		}
-		if (AMD != types.AvgMeanDiff{} && PT != types.PriceTime{}) {
-			//fmt.Println("=============================")
-			//fmt.Printf("Strategy 1, coin %v\n", coinName)
-			//fmt.Printf("Price %v - %v %v\n", leadExchange.getName(), slowExchange.getName(), leadExchCoin.getPrice(AMD.Prc)-slowExchCoin.getPrice(PT.Price))
-			//fmt.Printf("%v diff %v\n", leadExchange.getName(), AMD.Diff)
 
+		if (AMD != types.AvgMeanDiff{} && PT != types.PriceTime{}) {
 			isUpDirect := AMD.Diff < 0
 			isDiffOK := math.Abs(AMD.Diff) >= leadExchCoin.Thresholds.DiffThreshold
 			if !isDiffOK {
@@ -66,13 +62,23 @@ func StrategyPriceMeanDiffDirection(leadExchange types.ExchangeAvgMeanDiff, slow
 			priceAbort := PT.Price
 
 			order := types.Order{
-				Coin:        slowExchCoin,
-				IsUpDirect:  isUpDirect,
-				DealTimeout: dealTimeout,
-				Volume:      volume,
-				PriceStart:  priceStart,
-				PriceClose:  priceClose,
-				PriceAbort:  priceAbort,
+				Coin: slowExchCoin,
+				Strategy: types.StrategyMonitoring{
+					Name: "AvgMeanDiff",
+					SlowExchangeIndicators: map[string]interface{}{
+						"price": PT,
+					},
+					FastExchangeIndicators: map[string]interface{}{
+						"amd": AMD,
+					},
+				},
+				IsUpDirect:    isUpDirect,
+				DealTimeout:   dealTimeout,
+				DealFoundTime: time.Now(),
+				Volume:        volume,
+				PriceStart:    priceStart,
+				PriceClose:    priceClose,
+				PriceAbort:    priceAbort,
 			}
 			orderChan <- order
 		}

@@ -22,17 +22,17 @@ type Exchange struct {
 }
 
 type Thresholds struct {
-	DiffThreshold               float64
-	CrossExchangePriceThreshold float64
+	DiffThreshold               float64 `json:"diff_threashold"`
+	CrossExchangePriceThreshold float64 `json:"cept"`
 }
 
 type Coin struct {
-	Symbol string
+	Symbol string `json:"coin"`
 	// leading exchange price / Multiplier = current exchange price
-	Multiplier float64 `default:"1.0"`
-	Window     time.Duration
-	Data       *CoinData
-	Thresholds Thresholds
+	Multiplier float64       `default:"1.0"`
+	Window     time.Duration `json:"window"`
+	Data       *CoinData     `json:"coin_data"`
+	Thresholds Thresholds    `json:"threasholds"`
 }
 
 type CoinData struct {
@@ -68,13 +68,21 @@ type PriceTime struct {
 }
 
 type Order struct {
-	Coin        *Coin
-	IsUpDirect  bool
-	DealTimeout time.Duration
-	Volume      float64
-	PriceStart  float64
-	PriceClose  float64
-	PriceAbort  float64
+	Coin          *Coin
+	IsUpDirect    bool               `json:"is_up_direct"`
+	DealTimeout   time.Duration      `json:"deal_timeout"`
+	DealFoundTime time.Time          `json:"deal_found_time"`
+	Strategy      StrategyMonitoring `json:"stragegy"`
+	Volume        float64            `json:"volume"`
+	PriceStart    float64            `json:"price_start"`
+	PriceClose    float64            `json:"price_close"`
+	PriceAbort    float64            `json:"price_abort"`
+}
+
+type StrategyMonitoring struct {
+	Name                   string                 `json:"name"`
+	SlowExchangeIndicators map[string]interface{} `json:"slow_exchange_indicators"`
+	FastExchangeIndicators map[string]interface{} `json:"fast_exchange_indicators"`
 }
 
 type ExchangeBase interface {

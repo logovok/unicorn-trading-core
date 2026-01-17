@@ -71,12 +71,12 @@ func main() {
 	orderDistributor := orders.OrderDistributor{Ch: make(chan types.Order)}
 	go orderDistributor.Run()
 
-	//go strategyPriceMeanDiffDirection(&binance, &mex, "btcusdt", orderDistributor.ch)
+	go strategies.StrategyPriceMeanDiffDirection(&binance, &mex, "btcusdt", orderDistributor.Ch)
 	go strategies.StrategyPriceMeanDiffDirection(&binance, &mex, "shiba", orderDistributor.Ch)
 
 	log.Println("Bot started successfully")
+
 	for {
 		time.Sleep(1 * time.Second)
 	}
-
 }

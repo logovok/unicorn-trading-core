@@ -26,14 +26,6 @@ type Thresholds struct {
 	CrossExchangePriceThreshold float64
 }
 
-type Binance struct {
-	Exchange
-}
-
-type Mex struct {
-	Exchange
-}
-
 type Coin struct {
 	Symbol string
 	// leading exchange price / Multiplier = current exchange price
@@ -73,13 +65,6 @@ type AvgMeanDiff struct {
 type PriceTime struct {
 	Price float64   `json:"price"`
 	Time  time.Time `json:"time"`
-}
-
-type MexcMsg struct {
-	Channel string `json:"channel"`
-	Data    struct {
-		Close float64 `json:"c"`
-	} `json:"data"`
 }
 
 type Order struct {

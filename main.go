@@ -4,20 +4,22 @@ import (
 	"log"
 	_ "reflect"
 	"time"
+	"trading/core/exchanges/binance"
+	"trading/core/exchanges/mexc"
 	"trading/core/internal/orders"
 	"trading/core/internal/strategies"
 	"trading/core/internal/types"
 )
 
 func main() {
-	binance := types.Binance{
+	binance := binance.Binance{
 		Exchange: types.Exchange{
 			Name:   "Binance",
 			BaseWS: "fstream.binance.com",
 			Coins:  map[string]*types.Coin{},
 		},
 	}
-	mex := types.Mex{
+	mex := mexc.Mex{
 		Exchange: types.Exchange{
 			Name:   "Mex",
 			BaseWS: "contract.mexc.com",

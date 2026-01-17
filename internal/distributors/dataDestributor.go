@@ -1,4 +1,4 @@
-package main
+package distributors
 
 type Distributor[T any] interface {
 	Subscribe() <-chan T

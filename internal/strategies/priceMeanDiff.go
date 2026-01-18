@@ -42,45 +42,55 @@ func StrategyPriceMeanDiffDirection(leadExchange types.ExchangeAvgMeanDiff, slow
 			PT = res
 		}
 
-		if (AMD != types.AvgMeanDiff{} && PT != types.PriceTime{}) {
-			isUpDirect := AMD.Diff < 0
-			isDiffOK := math.Abs(AMD.Diff) >= leadExchCoin.Thresholds.DiffThreshold
-			if !isDiffOK {
-				continue
+		go func() {
+			if AMD.Time.Sub(PT.Time).Abs() > time.Millisecond*400 {
+				return
+			} else {
+				log.Printf("Time diff: %v", AMD.Time.Sub(PT.Time).Abs())
+				log.Printf("AMD time diff: %v", time.Since(AMD.Time))
+				log.Printf("PT time diff: %v", time.Since(PT.Time))
 			}
 
-			diffExchanges := math.Abs(leadExchCoin.GetPrice(AMD.Prc) - slowExchCoin.GetPrice(PT.Price))
-			isCrossExchangePriceOK := diffExchanges >= slowExchCoin.GetPrice(slowExchCoin.Thresholds.CrossExchangePriceThreshold)
-			if !isCrossExchangePriceOK {
-				continue
-			}
+			if (AMD != types.AvgMeanDiff{} && PT != types.PriceTime{}) {
+				isUpDirect := AMD.Diff < 0
+				isDiffOK := math.Abs(AMD.Diff) >= leadExchCoin.Thresholds.DiffThreshold
+				if !isDiffOK {
+					return
+				}
 
-			dealTimeout := types.AppConfig.OrderTimeout
-			volume := types.AppConfig.OrderVolume
-			priceStart := PT.Price
-			priceClose := PT.Price - AMD.Diff/slowExchCoin.Multiplier
-			priceAbort := PT.Price
+				diffExchanges := math.Abs(leadExchCoin.GetPrice(AMD.Prc) - slowExchCoin.GetPrice(PT.Price))
+				isCrossExchangePriceOK := diffExchanges >= slowExchCoin.GetPrice(slowExchCoin.Thresholds.CrossExchangePriceThreshold)
+				if !isCrossExchangePriceOK {
+					return
+				}
 
-			order := types.Order{
-				Coin: slowExchCoin,
-				Strategy: types.StrategyMonitoring{
-					Name: "AvgMeanDiff",
-					SlowExchangeIndicators: map[string]interface{}{
-						"price": PT,
+				dealTimeout := types.AppConfig.OrderTimeout
+				volume := types.AppConfig.OrderVolume
+				priceStart := PT.Price
+				priceClose := PT.Price - AMD.Diff/slowExchCoin.Multiplier
+				priceAbort := PT.Price
+
+				order := types.Order{
+					Coin: slowExchCoin,
+					Strategy: types.StrategyMonitoring{
+						Name: "AvgMeanDiff",
+						SlowExchangeIndicators: map[string]interface{}{
+							"price": PT,
+						},
+						FastExchangeIndicators: map[string]interface{}{
+							"amd": AMD,
+						},
 					},
-					FastExchangeIndicators: map[string]interface{}{
-						"amd": AMD,
-					},
-				},
-				IsUpDirect:    isUpDirect,
-				DealTimeout:   dealTimeout,
-				DealFoundTime: time.Now(),
-				Volume:        volume,
-				PriceStart:    priceStart,
-				PriceClose:    priceClose,
-				PriceAbort:    priceAbort,
+					IsUpDirect:    isUpDirect,
+					DealTimeout:   dealTimeout,
+					DealFoundTime: time.Now(),
+					Volume:        volume,
+					PriceStart:    priceStart,
+					PriceClose:    priceClose,
+					PriceAbort:    priceAbort,
+				}
+				orderChan <- order
 			}
-			orderChan <- order
-		}
+		}()
 	}
 }

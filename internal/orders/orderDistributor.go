@@ -5,6 +5,7 @@ import (
 	"log"
 	"math"
 	"time"
+	"trading/core/internal/storage"
 	"trading/core/internal/types"
 )
 
@@ -84,11 +85,22 @@ func (aw *AccountWorker) storeMetrics(value types.PriceTime, isOK bool) {
 	}
 	aw.AccountOrder.DealCloseTime = time.Now()
 	aw.AccountOrder.Earned = earned
-	outp, _ := json.Marshal(aw)
-	log.Println(string(outp))
-	// log.Println(json.Marshal(aw.AccountOrder.Order.Coin))
-	// log.Println(json.Marshal(aw.AccountOrder.Order))
-	// log.Println(json.Marshal(aw.AccountOrder))
-	// log.Println(json.Marshal(aw))
+
+	go aw.insertMetrics()
+
 	log.Printf("COIN: %v EARNED: %v", aw.AccountOrder.Coin.Symbol, earned)
+}
+
+func (aw *AccountWorker) insertMetrics() {
+	outp, err := json.Marshal(aw)
+	if err != nil {
+		log.Println("json marshal error:", err)
+		return
+	}
+	if err := storage.InsertAccountMetricsJSON(outp); err != nil {
+
+		log.Println("Clickhouse insert error:", err)
+	} else {
+		log.Println("ClickHouse insert successful")
+	}
 }

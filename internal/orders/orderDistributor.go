@@ -34,11 +34,12 @@ type AccountWorker struct {
 }
 
 type AccountOrder struct {
-	types.Order   `json:"order"`
-	BuyVolume     float64   `json:"buy_volume"`
-	DealOpenTime  time.Time `json:"deal_open_time"`
-	DealCloseTime time.Time `json:"deal_close_time"`
-	Earned        float64   `json:"earned"`
+	types.Order      `json:"order"`
+	BuyVolume        float64   `json:"buy_volume"`
+	DealOpenTime     time.Time `json:"deal_open_time"`
+	DealCloseTime    time.Time `json:"deal_close_time"`
+	Earned           float64   `json:"earned"`
+	ResultClosePrice float64   `json:"res_close_price"`
 }
 
 func (aw *AccountWorker) ProcessOrder() {
@@ -85,6 +86,7 @@ func (aw *AccountWorker) storeMetrics(value types.PriceTime, isOK bool) {
 	}
 	aw.AccountOrder.DealCloseTime = time.Now()
 	aw.AccountOrder.Earned = earned
+	aw.AccountOrder.ResultClosePrice = value.Price
 
 	go aw.insertMetrics()
 

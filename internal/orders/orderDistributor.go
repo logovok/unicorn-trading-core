@@ -95,6 +95,7 @@ func (aw *AccountWorker) ProcessOrder() {
 			}
 		}
 	}
+	// TODO: Solve/Fix
 	go func() {
 		aw.LockStream <- false
 	}()

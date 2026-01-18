@@ -29,7 +29,7 @@ type Thresholds struct {
 type Coin struct {
 	Symbol string `json:"coin"`
 	// leading exchange price / Multiplier = current exchange price
-	Multiplier float64       `default:"1.0"`
+	Multiplier float64       `default:"1"`
 	Window     time.Duration `json:"window"`
 	Data       *CoinData     `json:"coin_data"`
 	Thresholds Thresholds    `json:"threasholds"`
@@ -72,7 +72,7 @@ type Order struct {
 	IsUpDirect    bool               `json:"is_up_direct"`
 	DealTimeout   time.Duration      `json:"deal_timeout"`
 	DealFoundTime time.Time          `json:"deal_found_time"`
-	Strategy      StrategyMonitoring `json:"stragegy"`
+	Strategy      StrategyMonitoring `json:"strategy"`
 	Volume        float64            `json:"volume"`
 	PriceStart    float64            `json:"price_start"`
 	PriceClose    float64            `json:"price_close"`

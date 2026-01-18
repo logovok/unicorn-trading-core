@@ -7,11 +7,17 @@ import (
 	"trading/core/exchanges/binance"
 	"trading/core/exchanges/mexc"
 	"trading/core/internal/orders"
+	"trading/core/internal/storage"
 	"trading/core/internal/strategies"
 	"trading/core/internal/types"
 )
 
 func main() {
+	err := storage.InitClickHouse()
+	if err != nil {
+		log.Println("Failed to start ClickHouse")
+	}
+
 	binance := binance.Binance{
 		Exchange: types.Exchange{
 			Name:   "Binance",
@@ -28,9 +34,10 @@ func main() {
 	}
 
 	binance.Coins["btcusdt"] = &types.Coin{
-		Symbol: "btcusdt",
-		Window: (60 * time.Second),
-		Data:   &types.CoinData{},
+		Symbol:     "btcusdt",
+		Multiplier: 1,
+		Window:     (60 * time.Second),
+		Data:       &types.CoinData{},
 		Thresholds: types.Thresholds{
 			DiffThreshold: 1,
 		},
@@ -38,9 +45,10 @@ func main() {
 	enableCoinAVG(&binance, "btcusdt")
 
 	binance.Coins["shiba"] = &types.Coin{
-		Symbol: "1000shibusdt",
-		Window: (60 * time.Second),
-		Data:   &types.CoinData{},
+		Symbol:     "1000shibusdt",
+		Multiplier: 1,
+		Window:     (60 * time.Second),
+		Data:       &types.CoinData{},
 		Thresholds: types.Thresholds{
 			DiffThreshold: 0.000001,
 		},
@@ -48,9 +56,10 @@ func main() {
 	enableCoinAVG(&binance, "shiba")
 
 	mex.Coins["btcusdt"] = &types.Coin{
-		Symbol: "BTC_USDT",
-		Window: (60 * time.Second),
-		Data:   &types.CoinData{},
+		Symbol:     "BTC_USDT",
+		Multiplier: 1,
+		Window:     (60 * time.Second),
+		Data:       &types.CoinData{},
 		Thresholds: types.Thresholds{
 			CrossExchangePriceThreshold: 1,
 		},

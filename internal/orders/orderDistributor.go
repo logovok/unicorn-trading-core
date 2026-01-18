@@ -28,8 +28,35 @@ func (od *OrderDistributor) Run() {
 
 }
 
+// wait from lock_channel <---
+// lock at ProcessOrder
+// unlock at StoreMetrics
+//
+
+func (aw *AccountWorker) Run() {
+	isLocked := false
+
+	for {
+		if isLocked {
+			select {
+			case res := <-aw.lock:
+				isLocked = res
+			}
+		} else {
+			select {
+			case accountOrder := <-aw.orderStream:
+				isLocked = true
+				aw.AccountOrder = accountOrder
+				aw.ProcessOrder()
+			}
+		}
+	}
+}
+
 type AccountWorker struct {
 	AccountID    string `json:"account_id"`
+	lock         chan bool
+	orderStream  chan AccountOrder
 	AccountOrder AccountOrder
 }
 
@@ -77,6 +104,7 @@ func (aw *AccountWorker) ProcessOrder() {
 			}
 		}
 	}
+	aw.lock <- false
 }
 
 func (aw *AccountWorker) storeMetrics(value types.PriceTime, isOK bool) {

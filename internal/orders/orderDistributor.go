@@ -10,53 +10,44 @@ import (
 )
 
 type OrderDistributor struct {
-	Ch chan types.Order
+	Ch             chan types.Order
+	AccountWorkers []*AccountWorker
 }
 
 func (od *OrderDistributor) Run() {
 	for order := range od.Ch {
-		buyVolume := order.Volume
-		accountWorker := AccountWorker{
-			AccountID: "TBD",
-			AccountOrder: AccountOrder{
-				BuyVolume: buyVolume,
-				Order:     order,
-			},
+		buyVolume := order.Volume // It will be calculated
+		for _, worker := range od.AccountWorkers {
+			if !worker.IsLocked {
+				worker.OrderStream <- AccountOrder{
+					BuyVolume: buyVolume,
+					Order:     order,
+				}
+				break
+			}
 		}
-		go accountWorker.ProcessOrder()
 	}
 
 }
 
-// wait from lock_channel <---
-// lock at ProcessOrder
-// unlock at StoreMetrics
-//
-
 func (aw *AccountWorker) Run() {
-	isLocked := false
-
 	for {
-		if isLocked {
-			select {
-			case res := <-aw.lock:
-				isLocked = res
-			}
+		if aw.IsLocked {
+			aw.IsLocked = <-aw.LockStream
 		} else {
-			select {
-			case accountOrder := <-aw.orderStream:
-				isLocked = true
-				aw.AccountOrder = accountOrder
-				aw.ProcessOrder()
-			}
+			accountOrder := <-aw.OrderStream
+			aw.IsLocked = true
+			aw.AccountOrder = accountOrder
+			aw.ProcessOrder()
 		}
 	}
 }
 
 type AccountWorker struct {
-	AccountID    string `json:"account_id"`
-	lock         chan bool
-	orderStream  chan AccountOrder
+	AccountID    string            `json:"account_id"`
+	IsLocked     bool              `json:"-"`
+	LockStream   chan bool         `json:"-"`
+	OrderStream  chan AccountOrder `json:"-"`
 	AccountOrder AccountOrder
 }
 
@@ -104,7 +95,10 @@ func (aw *AccountWorker) ProcessOrder() {
 			}
 		}
 	}
-	aw.lock <- false
+	// TODO: Solve/Fix
+	go func() {
+		aw.LockStream <- false
+	}()
 }
 
 func (aw *AccountWorker) storeMetrics(value types.PriceTime, isOK bool) {
@@ -118,7 +112,7 @@ func (aw *AccountWorker) storeMetrics(value types.PriceTime, isOK bool) {
 
 	go aw.insertMetrics()
 
-	log.Printf("COIN: %v EARNED: %v", aw.AccountOrder.Coin.Symbol, earned)
+	log.Printf("ACC: %v  COIN: %v EARNED: %v", aw.AccountID, aw.AccountOrder.Coin.Symbol, earned)
 }
 
 func (aw *AccountWorker) insertMetrics() {

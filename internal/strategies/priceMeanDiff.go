@@ -45,10 +45,6 @@ func StrategyPriceMeanDiffDirection(leadExchange types.ExchangeAvgMeanDiff, slow
 		go func() {
 			if AMD.Time.Sub(PT.Time).Abs() > time.Millisecond*400 {
 				return
-			} else {
-				log.Printf("Time diff: %v", AMD.Time.Sub(PT.Time).Abs())
-				log.Printf("AMD time diff: %v", time.Since(AMD.Time))
-				log.Printf("PT time diff: %v", time.Since(PT.Time))
 			}
 
 			if (AMD != types.AvgMeanDiff{} && PT != types.PriceTime{}) {

@@ -36,52 +36,71 @@ func main() {
 	binance.Coins["btcusdt"] = &types.Coin{
 		Symbol:     "btcusdt",
 		Multiplier: 1,
-		Window:     (60 * time.Second),
+		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
 		Thresholds: types.Thresholds{
-			DiffThreshold: 1,
+			DiffThreshold: 5,
 		},
 	}
-	enableCoinAVG(&binance, "btcusdt")
 
 	binance.Coins["shiba"] = &types.Coin{
 		Symbol:     "1000shibusdt",
 		Multiplier: 1,
-		Window:     (60 * time.Second),
+		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
 		Thresholds: types.Thresholds{
-			DiffThreshold: 0.000001,
+			DiffThreshold: 0.000000005,
 		},
 	}
-	enableCoinAVG(&binance, "shiba")
 
 	mex.Coins["btcusdt"] = &types.Coin{
 		Symbol:     "BTC_USDT",
 		Multiplier: 1,
-		Window:     (60 * time.Second),
+		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
 		Thresholds: types.Thresholds{
 			CrossExchangePriceThreshold: 1,
 		},
 	}
-	enableCoinPrice(&mex, "btcusdt")
 
 	mex.Coins["shiba"] = &types.Coin{
 		Symbol:     "SHIB_USDT",
 		Multiplier: 1000,
-		Window:     (60 * time.Second),
+		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
 		Thresholds: types.Thresholds{
-			CrossExchangePriceThreshold: 0.000001,
+			CrossExchangePriceThreshold: 0.000000000005,
 		},
 	}
-	enableCoinPrice(&mex, "shiba")
 
-	orderDistributor := orders.OrderDistributor{Ch: make(chan types.Order)}
+	aw1 := orders.AccountWorker{
+		AccountID:   "worker1",
+		IsLocked:    false,
+		LockStream:  make(chan bool),
+		OrderStream: make(chan orders.AccountOrder),
+	}
+	go aw1.Run()
+	aw2 := orders.AccountWorker{
+		AccountID:   "worker2",
+		IsLocked:    false,
+		LockStream:  make(chan bool),
+		OrderStream: make(chan orders.AccountOrder),
+	}
+	go aw2.Run()
+
+	orderDistributor := orders.OrderDistributor{
+		Ch:             make(chan types.Order),
+		AccountWorkers: []*orders.AccountWorker{&aw1, &aw2},
+	}
 	go orderDistributor.Run()
 
 	go strategies.StrategyPriceMeanDiffDirection(&binance, &mex, "btcusdt", orderDistributor.Ch)
 	go strategies.StrategyPriceMeanDiffDirection(&binance, &mex, "shiba", orderDistributor.Ch)
+
+	enableCoinPrice(&mex, "shiba")
+	enableCoinPrice(&mex, "btcusdt")
+	enableCoinAVG(&binance, "shiba")
+	enableCoinAVG(&binance, "btcusdt")
 
 	log.Println("Bot started successfully")
 

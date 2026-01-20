@@ -10,11 +10,22 @@ type PMDThreasholdSet struct {
 	// TODO: Adjust value calc + distributor logic so that data is kept for longest window and distributed as asked
 	// OR to do separate calcs for different windows
 	// Window             time.Duration `json:"window"`
-	CrossExchangeLag      time.Duration `json:"cross_exchange_lag"`
-	DealTimeout           time.Duration `json:"deal_timeout"`
-	OrderVolumeMultiplier float64       `json:"order_volume_percent"`
+	CrossExchangeLag            time.Duration `json:"cross_exchange_lag"`
+	DealTimeout                 time.Duration `json:"deal_timeout"`
+	OrderVolumeMultiplier       float64       `json:"order_volume_percent"`
+	DiffThreshold               float64       `json:"diff_threashold"`
+	CrossExchangePriceThreshold float64       `json:"cross_exchange_price_threshold"`
 	// TODO:
 	// Winrate               float64       `json:"-"`
+}
+
+type ConcretePriceMeanDiff struct {
+	Name string
+	TS   PMDThreasholdSet `json:"threashold_set"`
+}
+
+func (cpd *ConcretePriceMeanDiff) GetName() string {
+	return cpd.Name
 }
 
 // TODO: use more params to calculate close price
@@ -31,10 +42,6 @@ func (pmd *ConcretePriceMeanDiff) calcPriceAbort(price float64) float64 {
 	return price
 }
 
-func (pmd *ConcretePriceMeanDiff) calcOrderVolume(price float64, configSet string) float64 {
+func (pmd *ConcretePriceMeanDiff) calcOrderVolume(price float64) float64 {
 	return price * pmd.TS.OrderVolumeMultiplier
-}
-
-type ConcretePriceMeanDiff struct {
-	TS PMDThreasholdSet `json:"threashold_set"`
 }

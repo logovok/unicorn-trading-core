@@ -61,7 +61,7 @@ type AccountOrder struct {
 }
 
 func (aw *AccountWorker) ProcessOrder() {
-	var ch = aw.AccountOrder.Coin.Data.Price.Subscribe()
+	var ch = aw.AccountOrder.SlowExchangeCoin.Data.Price.Subscribe()
 	// Open AccountOrder in Exchange
 	timeout := time.Now().Add(aw.AccountOrder.DealTimeout)
 	aw.AccountOrder.DealOpenTime = time.Now()
@@ -112,7 +112,7 @@ func (aw *AccountWorker) storeMetrics(value types.PriceTime, isOK bool) {
 
 	go aw.insertMetrics()
 
-	log.Printf("ACC: %v  COIN: %v EARNED: %v", aw.AccountID, aw.AccountOrder.Coin.Symbol, earned)
+	log.Printf("ACC: %v  COIN: %v EARNED: %v", aw.AccountID, aw.AccountOrder.SlowExchangeCoin.Symbol, earned)
 }
 
 func (aw *AccountWorker) insertMetrics() {
@@ -128,3 +128,7 @@ func (aw *AccountWorker) insertMetrics() {
 		log.Println("ClickHouse insert successful")
 	}
 }
+
+// func (aw *AccountWorker) calcWinrates() {
+// 	aw.AccountOrder.Order.Strategy
+// }

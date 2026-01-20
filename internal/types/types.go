@@ -22,7 +22,7 @@ type Exchange struct {
 }
 
 type Thresholds struct {
-	DiffThreshold               float64 `json:"diff_threashold"`
+	DiffThreshold               float64 `json:"diff_threshold"`
 	CrossExchangePriceThreshold float64 `json:"cept"`
 }
 
@@ -30,9 +30,10 @@ type Coin struct {
 	Symbol string `json:"coin"`
 	// leading exchange price / Multiplier = current exchange price
 	Multiplier float64       `default:"1"`
+	Commission float64       `default:"0"`
 	Window     time.Duration `json:"window"`
 	Data       *CoinData     `json:"coin_data"`
-	Thresholds Thresholds    `json:"threasholds"`
+	Thresholds Thresholds    `json:"thresholds"`
 }
 
 type CoinData struct {

@@ -102,6 +102,7 @@ func main() {
 	// capture data for evaluation (go send at the end)
 	// Run through all parameter OR run approximation
 	// (multiparam approximations)
+
 	pmd := strategies.PriceMeanDiff{
 		ThreasholdSets: map[string]*strategies.PMDThreasholdSet{
 			"untuned": {
@@ -111,8 +112,12 @@ func main() {
 			},
 		},
 	}
-	go pmd.StrategyPriceMeanDiffDirection(&binance, &mex, "btcusdt", "untuned", orderDistributor.Ch)
-	go pmd.StrategyPriceMeanDiffDirection(&binance, &mex, "shiba", "untuned", orderDistributor.Ch)
+
+	strat1 := strategies.ConcretePriceMeanDiff{
+		TS: *pmd.ThreasholdSets["untuned"],
+	}
+	go strat1.StrategyPriceMeanDiffDirection(&binance, &mex, "btcusdt", "untuned", orderDistributor.Ch)
+	go strat1.StrategyPriceMeanDiffDirection(&binance, &mex, "shiba", "untuned", orderDistributor.Ch)
 
 	enableCoinPrice(&mex, "shiba")
 	enableCoinPrice(&mex, "btcusdt")

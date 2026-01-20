@@ -45,7 +45,7 @@ func main() {
 
 	binance.Coins["shiba"] = &types.Coin{
 		Symbol:     "1000shibusdt",
-		Multiplier: 1,
+		Multiplier: 0.001,
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
 		Thresholds: types.Thresholds{
@@ -65,7 +65,7 @@ func main() {
 
 	mex.Coins["shiba"] = &types.Coin{
 		Symbol:     "SHIB_USDT",
-		Multiplier: 1000,
+		Multiplier: 1,
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
 		Thresholds: types.Thresholds{

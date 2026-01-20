@@ -94,6 +94,14 @@ func main() {
 	}
 	go orderDistributor.Run()
 
+	// Dynamic: Best winrate
+	// Store winrate at strategy
+	// st1: name: threasholds
+	// st2: name: winrate
+	// func spawn winrate
+	// capture data for evaluation (go send at the end)
+	// Run through all parameter OR run approximation
+	// (multiparam approximations)
 	go strategies.StrategyPriceMeanDiffDirection(&binance, &mex, "btcusdt", orderDistributor.Ch)
 	go strategies.StrategyPriceMeanDiffDirection(&binance, &mex, "shiba", orderDistributor.Ch)
 

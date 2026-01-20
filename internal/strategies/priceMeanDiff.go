@@ -63,7 +63,7 @@ func StrategyPriceMeanDiffDirection(leadExchange types.ExchangeAvgMeanDiff, slow
 				dealTimeout := types.AppConfig.OrderTimeout
 				volume := types.AppConfig.OrderVolume
 				priceStart := PT.Price
-				priceClose := PT.Price - AMD.Diff/slowExchCoin.Multiplier
+				priceClose := PT.Price - leadExchCoin.GetPrice(AMD.Diff)
 				priceAbort := PT.Price
 
 				order := types.Order{

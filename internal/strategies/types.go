@@ -17,18 +17,23 @@ type PMDThreasholdSet struct {
 
 // TODO: use more params to calculate close price
 // Note: the func is bound to strategy, as we may want different implemetation of this per strategy
-func (pmd *PriceMeanDiff) calcPriceStart(price float64) float64 {
+func (pmd *ConcretePriceMeanDiff) calcPriceStart(price float64) float64 {
 	return price
 }
 
-func (pmd *PriceMeanDiff) calcPriceClose(price float64, diff float64) float64 {
+func (pmd *ConcretePriceMeanDiff) calcPriceClose(price float64, diff float64) float64 {
 	return price + diff
 }
 
-func (pmd *PriceMeanDiff) calcPriceAbort(price float64) float64 {
+func (pmd *ConcretePriceMeanDiff) calcPriceAbort(price float64) float64 {
 	return price
 }
 
-func (pmd *PriceMeanDiff) calcOrderVolume(price float64, configSet string) float64 {
-	return price * pmd.ThreasholdSets[configSet].OrderVolumeMultiplier
+func (pmd *ConcretePriceMeanDiff) calcOrderVolume(price float64, configSet string) float64 {
+	return price * pmd.TS.OrderVolumeMultiplier
+}
+
+type ConcretePriceMeanDiff struct {
+	TS      PMDThreasholdSet `json:"threashold_set"`
+	Winrate float64          `json:"winrate"`
 }

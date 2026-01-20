@@ -9,7 +9,7 @@ import (
 	"trading/core/internal/types"
 )
 
-func (pmd *PriceMeanDiff) StrategyPriceMeanDiffDirection(leadExchange types.ExchangeAvgMeanDiff, slowExchange types.ExchangePrice, coinName string, configSet string, orderChan chan<- types.Order) {
+func (pmd *ConcretePriceMeanDiff) StrategyPriceMeanDiffDirection(leadExchange types.ExchangeAvgMeanDiff, slowExchange types.ExchangePrice, coinName string, configSet string, orderChan chan<- types.Order) {
 	leadExchCoin, ok := leadExchange.GetCoin(coinName)
 	if !ok {
 		fmt.Println("Lead exchange doesn't has required coin")
@@ -43,7 +43,7 @@ func (pmd *PriceMeanDiff) StrategyPriceMeanDiffDirection(leadExchange types.Exch
 		}
 
 		go func() {
-			if AMD.Time.Sub(PT.Time).Abs() > pmd.ThreasholdSets[configSet].CrossExchangeLag {
+			if AMD.Time.Sub(PT.Time).Abs() > pmd.TS.CrossExchangeLag {
 				return
 			}
 
@@ -60,7 +60,7 @@ func (pmd *PriceMeanDiff) StrategyPriceMeanDiffDirection(leadExchange types.Exch
 					return
 				}
 
-				dealTimeout := pmd.ThreasholdSets[configSet].DealTimeout
+				dealTimeout := pmd.TS.DealTimeout
 				volume := pmd.calcOrderVolume(PT.Price, configSet)
 				priceStart := pmd.calcPriceStart(PT.Price)
 				priceClose := pmd.calcPriceClose(PT.Price, (AMD.Diff / slowExchCoin.Multiplier * (-1)))

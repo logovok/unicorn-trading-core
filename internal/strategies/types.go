@@ -13,6 +13,8 @@ type PMDThreasholdSet struct {
 	CrossExchangeLag      time.Duration `json:"cross_exchange_lag"`
 	DealTimeout           time.Duration `json:"deal_timeout"`
 	OrderVolumeMultiplier float64       `json:"order_volume_percent"`
+	// TODO:
+	// Winrate               float64       `json:"-"`
 }
 
 // TODO: use more params to calculate close price
@@ -34,6 +36,5 @@ func (pmd *ConcretePriceMeanDiff) calcOrderVolume(price float64, configSet strin
 }
 
 type ConcretePriceMeanDiff struct {
-	TS      PMDThreasholdSet `json:"threashold_set"`
-	Winrate float64          `json:"winrate"`
+	TS PMDThreasholdSet `json:"threashold_set"`
 }

@@ -5,11 +5,10 @@ import (
 	"log"
 	"math"
 	"time"
-
 	"trading/core/internal/types"
 )
 
-func (pmd *ConcretePriceMeanDiff) StrategyPriceMeanDiffDirection(leadExchange types.ExchangeAvgMeanDiff, slowExchange types.ExchangePrice, coinName string, configSet string, orderChan chan<- types.Order) {
+func (pmd *ConcretePriceMeanDiff) Stragegize(leadExchange types.ExchangeAvgMeanDiff, slowExchange types.ExchangePrice, coinName string, configSet string, orderChan chan<- types.Order) {
 	leadExchCoin, ok := leadExchange.GetCoin(coinName)
 	if !ok {
 		fmt.Println("Lead exchange doesn't has required coin")
@@ -43,50 +42,64 @@ func (pmd *ConcretePriceMeanDiff) StrategyPriceMeanDiffDirection(leadExchange ty
 		}
 
 		go func() {
-			if AMD.Time.Sub(PT.Time).Abs() > pmd.TS.CrossExchangeLag {
-				return
-			}
-
-			if (AMD != types.AvgMeanDiff{} && PT != types.PriceTime{}) {
-				isUpDirect := AMD.Diff < 0
-				isDiffOK := math.Abs(AMD.Diff) >= leadExchCoin.Thresholds.DiffThreshold
-				if !isDiffOK {
-					return
-				}
-
-				diffExchanges := math.Abs(leadExchCoin.GetPrice(AMD.Prc) - slowExchCoin.GetPrice(PT.Price))
-				isCrossExchangePriceOK := diffExchanges >= slowExchCoin.GetPrice(slowExchCoin.Thresholds.CrossExchangePriceThreshold)
-				if !isCrossExchangePriceOK {
-					return
-				}
-
-				dealTimeout := pmd.TS.DealTimeout
-				volume := pmd.calcOrderVolume(PT.Price, configSet)
-				priceStart := pmd.calcPriceStart(PT.Price)
-				priceClose := pmd.calcPriceClose(PT.Price, (AMD.Diff / slowExchCoin.Multiplier * (-1)))
-				priceAbort := pmd.calcPriceAbort(PT.Price)
-
-				order := types.Order{
-					Coin: slowExchCoin,
-					Strategy: types.StrategyMonitoring{
-						Name: "AvgMeanDiff",
-						SlowExchangeIndicators: map[string]interface{}{
-							"price": PT,
-						},
-						FastExchangeIndicators: map[string]interface{}{
-							"amd": AMD,
-						},
-					},
-					IsUpDirect:    isUpDirect,
-					DealTimeout:   dealTimeout,
-					DealFoundTime: time.Now(),
-					Volume:        volume,
-					PriceStart:    priceStart,
-					PriceClose:    priceClose,
-					PriceAbort:    priceAbort,
-				}
-				orderChan <- order
-			}
+			order := pmd.Process(AMD, PT, *leadExchCoin, *slowExchCoin)
+			orderChan <- *order
 		}()
 	}
 }
+
+func (pmd *ConcretePriceMeanDiff) Process(AMD types.AvgMeanDiff, PT types.PriceTime, leadExchCoin types.Coin, slowExchCoin types.Coin) *types.Order {
+	if AMD.Time.Sub(PT.Time).Abs() > pmd.TS.CrossExchangeLag {
+		return nil
+	}
+
+	if (AMD != types.AvgMeanDiff{} && PT != types.PriceTime{}) {
+		isUpDirect := AMD.Diff < 0
+		isDiffOK := math.Abs(AMD.Diff) >= pmd.TS.DiffThreshold // TODO: Ensure I set the threshold
+		if !isDiffOK {
+			return nil
+		}
+
+		diffExchanges := math.Abs(leadExchCoin.GetPrice(AMD.Prc) - slowExchCoin.GetPrice(PT.Price))
+		isCrossExchangePriceOK := diffExchanges >= slowExchCoin.GetPrice(slowExchCoin.Thresholds.CrossExchangePriceThreshold)
+		if !isCrossExchangePriceOK {
+			return nil
+		}
+
+		dealTimeout := pmd.TS.DealTimeout
+		volume := pmd.calcOrderVolume(PT.Price)
+		priceStart := pmd.calcPriceStart(PT.Price)
+		priceClose := pmd.calcPriceClose(PT.Price, (AMD.Diff / slowExchCoin.Multiplier * (-1)))
+		priceAbort := pmd.calcPriceAbort(PT.Price)
+
+		order := types.Order{
+			SlowExchangeCoin: &slowExchCoin,
+			FastExchangeCoin: &leadExchCoin,
+			Strategy: types.StrategyMonitoring{
+				Strategy: pmd,
+				SlowExchangeIndicators: map[string]interface{}{
+					"price": PT,
+				},
+				FastExchangeIndicators: map[string]interface{}{
+					"amd": AMD,
+				},
+			},
+			IsUpDirect:    isUpDirect,
+			DealTimeout:   dealTimeout,
+			DealFoundTime: time.Now(),
+			Volume:        volume,
+			PriceStart:    priceStart,
+			PriceClose:    priceClose,
+			PriceAbort:    priceAbort,
+		}
+		return &order
+	}
+	return nil
+}
+
+// foreach threashold set init concrete strategy, launch emulate, record winrate and other params
+// func (pmd *ConcretePriceMeanDiff) Emulate(ao orders.AccountOrder) {
+// 	order := pmd.Process(ao.Strategy.FastExchangeIndicators["amd"].(types.AvgMeanDiff), ao.Strategy.SlowExchangeIndicators["price"].(types.PriceTime), *ao.FastExchangeCoin, *ao.SlowExchangeCoin)
+// 	closeTime := ao.DealCloseTime
+// 	closePrice := ao.ResultClosePrice
+// }

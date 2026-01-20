@@ -97,7 +97,8 @@ func main() {
 	// Dynamic: Best winrate
 	// Store winrate at strategy
 	// st1: name: threasholds
-	// st2: name: winrate
+	// st2: name: winrate per strategy
+	// st3: name: winrate per all strategies with supported parameters
 	// func spawn winrate
 	// capture data for evaluation (go send at the end)
 	// Run through all parameter OR run approximation
@@ -114,10 +115,11 @@ func main() {
 	}
 
 	strat1 := strategies.ConcretePriceMeanDiff{
-		TS: *pmd.ThreasholdSets["untuned"],
+		Name: "Random params",
+		TS:   *pmd.ThreasholdSets["untuned"],
 	}
-	go strat1.StrategyPriceMeanDiffDirection(&binance, &mex, "btcusdt", "untuned", orderDistributor.Ch)
-	go strat1.StrategyPriceMeanDiffDirection(&binance, &mex, "shiba", "untuned", orderDistributor.Ch)
+	go strat1.Stragegize(&binance, &mex, "btcusdt", "untuned", orderDistributor.Ch)
+	go strat1.Stragegize(&binance, &mex, "shiba", "untuned", orderDistributor.Ch)
 
 	enableCoinPrice(&mex, "shiba")
 	enableCoinPrice(&mex, "btcusdt")

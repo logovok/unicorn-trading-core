@@ -102,8 +102,17 @@ func main() {
 	// capture data for evaluation (go send at the end)
 	// Run through all parameter OR run approximation
 	// (multiparam approximations)
-	go strategies.StrategyPriceMeanDiffDirection(&binance, &mex, "btcusdt", orderDistributor.Ch)
-	go strategies.StrategyPriceMeanDiffDirection(&binance, &mex, "shiba", orderDistributor.Ch)
+	pmd := strategies.PriceMeanDiff{
+		ThreasholdSets: map[string]*strategies.PMDThreasholdSet{
+			"untuned": {
+				CrossExchangeLag:      time.Millisecond * 400,
+				DealTimeout:           time.Millisecond * 15000,
+				OrderVolumeMultiplier: 1,
+			},
+		},
+	}
+	go pmd.StrategyPriceMeanDiffDirection(&binance, &mex, "btcusdt", "untuned", orderDistributor.Ch)
+	go pmd.StrategyPriceMeanDiffDirection(&binance, &mex, "shiba", "untuned", orderDistributor.Ch)
 
 	enableCoinPrice(&mex, "shiba")
 	enableCoinPrice(&mex, "btcusdt")

@@ -9,7 +9,7 @@ import (
 	"trading/core/internal/types"
 )
 
-func StrategyPriceMeanDiffDirection(leadExchange types.ExchangeAvgMeanDiff, slowExchange types.ExchangePrice, coinName string, orderChan chan<- types.Order) {
+func (pmd *PriceMeanDiff) StrategyPriceMeanDiffDirection(leadExchange types.ExchangeAvgMeanDiff, slowExchange types.ExchangePrice, coinName string, configSet string, orderChan chan<- types.Order) {
 	leadExchCoin, ok := leadExchange.GetCoin(coinName)
 	if !ok {
 		fmt.Println("Lead exchange doesn't has required coin")
@@ -43,7 +43,7 @@ func StrategyPriceMeanDiffDirection(leadExchange types.ExchangeAvgMeanDiff, slow
 		}
 
 		go func() {
-			if AMD.Time.Sub(PT.Time).Abs() > time.Millisecond*400 {
+			if AMD.Time.Sub(PT.Time).Abs() > pmd.ThreasholdSets[configSet].CrossExchangeLag {
 				return
 			}
 
@@ -60,11 +60,11 @@ func StrategyPriceMeanDiffDirection(leadExchange types.ExchangeAvgMeanDiff, slow
 					return
 				}
 
-				dealTimeout := types.AppConfig.OrderTimeout
-				volume := types.AppConfig.OrderVolume
-				priceStart := PT.Price
-				priceClose := PT.Price - AMD.Diff/slowExchCoin.Multiplier
-				priceAbort := PT.Price
+				dealTimeout := pmd.ThreasholdSets[configSet].DealTimeout
+				volume := pmd.calcOrderVolume(PT.Price, configSet)
+				priceStart := pmd.calcPriceStart(PT.Price)
+				priceClose := pmd.calcPriceClose(PT.Price, (AMD.Diff / slowExchCoin.Multiplier * (-1)))
+				priceAbort := pmd.calcPriceAbort(PT.Price)
 
 				order := types.Order{
 					Coin: slowExchCoin,

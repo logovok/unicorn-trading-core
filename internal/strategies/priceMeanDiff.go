@@ -98,10 +98,3 @@ func (pmd *PriceMeanDiff) Process(AMD types.AvgMeanDiff, PT types.PriceTime, lea
 	}
 	return nil
 }
-
-// foreach threashold set init concrete strategy, launch emulate, record winrate and other params
-// func (pmd *PriceMeanDiff) Emulate(ao orders.AccountOrder) {
-// 	order := pmd.Process(ao.Strategy.FastExchangeIndicators["amd"].(types.AvgMeanDiff), ao.Strategy.SlowExchangeIndicators["price"].(types.PriceTime), *ao.FastExchangeCoin, *ao.SlowExchangeCoin)
-// 	closeTime := ao.DealCloseTime
-// 	closePrice := ao.ResultClosePrice
-// }

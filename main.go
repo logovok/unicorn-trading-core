@@ -94,16 +94,6 @@ func main() {
 	}
 	go orderDistributor.Run()
 
-	// Dynamic: Best winrate
-	// Store winrate at strategy
-	// st1: name: threasholds
-	// st2: name: winrate per strategy
-	// st3: name: winrate per all strategies with supported parameters
-	// func spawn winrate
-	// capture data for evaluation (go send at the end)
-	// Run through all parameter OR run approximation
-	// (multiparam approximations)
-
 	pmd := strategies.PriceMeanDiffGlobals{
 		ThreasholdSets: map[string]*strategies.PMDThreasholdSet{
 			"untuned": {

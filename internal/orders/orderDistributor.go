@@ -128,7 +128,3 @@ func (aw *AccountWorker) insertMetrics() {
 		log.Println("ClickHouse insert successful")
 	}
 }
-
-// func (aw *AccountWorker) calcWinrates() {
-// 	aw.AccountOrder.Order.Strategy
-// }

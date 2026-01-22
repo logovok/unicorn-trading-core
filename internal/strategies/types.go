@@ -15,8 +15,6 @@ type PMDThreasholdSet struct {
 	OrderVolumeMultiplier       float64       `json:"order_volume_percent"`
 	DiffThreshold               float64       `json:"diff_threashold"`
 	CrossExchangePriceThreshold float64       `json:"cross_exchange_price_threshold"`
-	// TODO:
-	// Winrate               float64       `json:"-"`
 }
 
 type PriceMeanDiff struct {

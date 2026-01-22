@@ -96,8 +96,22 @@ func main() {
 	}
 	go orderDistributor.Run()
 
-	go strategies.StrategyPriceMeanDiffDirection(&binance, &mex, "btcusdt", orderDistributor.Ch)
-	go strategies.StrategyPriceMeanDiffDirection(&binance, &mex, "shiba", orderDistributor.Ch)
+	pmd := strategies.PriceMeanDiffGlobals{
+		ThreasholdSets: map[string]*strategies.PMDThreasholdSet{
+			"untuned": {
+				CrossExchangeLag:      time.Millisecond * 400,
+				DealTimeout:           time.Millisecond * 15000,
+				OrderVolumeMultiplier: 1,
+			},
+		},
+	}
+
+	strat1 := strategies.PriceMeanDiff{
+		Name: "Random params",
+		TS:   pmd.ThreasholdSets["untuned"],
+	}
+	go strat1.Strategize(&binance, &mex, "btcusdt", orderDistributor.Ch)
+	go strat1.Strategize(&binance, &mex, "shiba", orderDistributor.Ch)
 
 	enableCoinPrice(&mex, "shiba")
 	enableCoinPrice(&mex, "btcusdt")

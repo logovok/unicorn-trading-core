@@ -2,7 +2,7 @@ package strategies
 
 import "time"
 
-type PriceMeanDiff struct {
+type PriceMeanDiffGlobals struct {
 	ThreasholdSets map[string]*PMDThreasholdSet
 }
 
@@ -19,29 +19,29 @@ type PMDThreasholdSet struct {
 	// Winrate               float64       `json:"-"`
 }
 
-type ConcretePriceMeanDiff struct {
+type PriceMeanDiff struct {
 	Name string
-	TS   PMDThreasholdSet `json:"threashold_set"`
+	TS   *PMDThreasholdSet `json:"threashold_set"`
 }
 
-func (cpd *ConcretePriceMeanDiff) GetName() string {
+func (cpd *PriceMeanDiff) GetName() string {
 	return cpd.Name
 }
 
 // TODO: use more params to calculate close price
 // Note: the func is bound to strategy, as we may want different implemetation of this per strategy
-func (pmd *ConcretePriceMeanDiff) calcPriceStart(price float64) float64 {
+func (pmd *PriceMeanDiff) calcPriceStart(price float64) float64 {
 	return price
 }
 
-func (pmd *ConcretePriceMeanDiff) calcPriceClose(price float64, diff float64) float64 {
+func (pmd *PriceMeanDiff) calcPriceClose(price float64, diff float64) float64 {
 	return price + diff
 }
 
-func (pmd *ConcretePriceMeanDiff) calcPriceAbort(price float64) float64 {
+func (pmd *PriceMeanDiff) calcPriceAbort(price float64) float64 {
 	return price
 }
 
-func (pmd *ConcretePriceMeanDiff) calcOrderVolume(price float64) float64 {
+func (pmd *PriceMeanDiff) calcOrderVolume(price float64) float64 {
 	return price * pmd.TS.OrderVolumeMultiplier
 }

@@ -104,7 +104,7 @@ func main() {
 	// Run through all parameter OR run approximation
 	// (multiparam approximations)
 
-	pmd := strategies.PriceMeanDiff{
+	pmd := strategies.PriceMeanDiffGlobals{
 		ThreasholdSets: map[string]*strategies.PMDThreasholdSet{
 			"untuned": {
 				CrossExchangeLag:      time.Millisecond * 400,
@@ -114,12 +114,12 @@ func main() {
 		},
 	}
 
-	strat1 := strategies.ConcretePriceMeanDiff{
+	strat1 := strategies.PriceMeanDiff{
 		Name: "Random params",
-		TS:   *pmd.ThreasholdSets["untuned"],
+		TS:   pmd.ThreasholdSets["untuned"],
 	}
-	go strat1.Stragegize(&binance, &mex, "btcusdt", "untuned", orderDistributor.Ch)
-	go strat1.Stragegize(&binance, &mex, "shiba", "untuned", orderDistributor.Ch)
+	go strat1.Strategize(&binance, &mex, "btcusdt", orderDistributor.Ch)
+	go strat1.Strategize(&binance, &mex, "shiba", orderDistributor.Ch)
 
 	enableCoinPrice(&mex, "shiba")
 	enableCoinPrice(&mex, "btcusdt")

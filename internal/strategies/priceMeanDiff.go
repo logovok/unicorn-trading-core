@@ -8,7 +8,7 @@ import (
 	"trading/core/internal/types"
 )
 
-func (pmd *ConcretePriceMeanDiff) Stragegize(leadExchange types.ExchangeAvgMeanDiff, slowExchange types.ExchangePrice, coinName string, configSet string, orderChan chan<- types.Order) {
+func (pmd *PriceMeanDiff) Strategize(leadExchange types.ExchangeAvgMeanDiff, slowExchange types.ExchangePrice, coinName string, orderChan chan<- types.Order) {
 	leadExchCoin, ok := leadExchange.GetCoin(coinName)
 	if !ok {
 		fmt.Println("Lead exchange doesn't has required coin")
@@ -43,12 +43,14 @@ func (pmd *ConcretePriceMeanDiff) Stragegize(leadExchange types.ExchangeAvgMeanD
 
 		go func() {
 			order := pmd.Process(AMD, PT, *leadExchCoin, *slowExchCoin)
-			orderChan <- *order
+			if order != nil {
+				orderChan <- *order
+			}
 		}()
 	}
 }
 
-func (pmd *ConcretePriceMeanDiff) Process(AMD types.AvgMeanDiff, PT types.PriceTime, leadExchCoin types.Coin, slowExchCoin types.Coin) *types.Order {
+func (pmd *PriceMeanDiff) Process(AMD types.AvgMeanDiff, PT types.PriceTime, leadExchCoin types.Coin, slowExchCoin types.Coin) *types.Order {
 	if AMD.Time.Sub(PT.Time).Abs() > pmd.TS.CrossExchangeLag {
 		return nil
 	}
@@ -98,7 +100,7 @@ func (pmd *ConcretePriceMeanDiff) Process(AMD types.AvgMeanDiff, PT types.PriceT
 }
 
 // foreach threashold set init concrete strategy, launch emulate, record winrate and other params
-// func (pmd *ConcretePriceMeanDiff) Emulate(ao orders.AccountOrder) {
+// func (pmd *PriceMeanDiff) Emulate(ao orders.AccountOrder) {
 // 	order := pmd.Process(ao.Strategy.FastExchangeIndicators["amd"].(types.AvgMeanDiff), ao.Strategy.SlowExchangeIndicators["price"].(types.PriceTime), *ao.FastExchangeCoin, *ao.SlowExchangeCoin)
 // 	closeTime := ao.DealCloseTime
 // 	closePrice := ao.ResultClosePrice

@@ -62,6 +62,44 @@ type AvgMeanDiff struct {
 	Time time.Time `json:"time"`
 }
 
+type AVG struct {
+	TimeBoundSlidingWindow
+	SumV  float64 `json:"sum_vol"`
+	SumPV float64 `json:"sum_prc_vol"`
+}
+
+// TODO: Double-check that we will be getting a reference to the object that won't update, so it won't mes up our calculations
+// Move calling recalc logic to Distributor or make another distributor type
+// So, we call Subscribe(window time.Duration)
+func (avg *AVG) Recalc(trades *[]Trade, CurrentLast time.Time, now time.Time) {
+	cutoff := now.Add(-avg.Window)
+	ln := len(*trades)
+
+	for i := 0; i < ln && !((*trades)[i].Time.After(cutoff)); i++ {
+		avg.SumPV -= (*trades)[i].Price * (*trades)[i].Volume
+		avg.SumPV -= (*trades)[i].Volume
+	}
+
+	for i := len(*trades) - 1; i >= 0; i-- {
+		if !(*trades)[i].Time.After(avg.TimeBoundSlidingWindow.CurrentFirst) {
+			break
+		}
+
+		// Add newly added price points
+		avg.SumPV += (*trades)[i].Price * (*trades)[i].Volume
+		avg.SumV += (*trades)[i].Volume
+	}
+
+}
+
+// TODO: add distributor logic, so that before sending data it waits for window to populate
+// (if Last - First first are ~ Window)
+type TimeBoundSlidingWindow struct {
+	Window       time.Duration `json:"window"`
+	CurrentFirst time.Time     `json:"current_first"`
+	CurrentLast  time.Time     `json:"current_last"`
+}
+
 type PriceTime struct {
 	Price float64   `json:"price"`
 	Time  time.Time `json:"time"`

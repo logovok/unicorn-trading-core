@@ -74,15 +74,16 @@ type Order struct {
 	IsUpDirect       bool               `json:"is_up_direct"`
 	DealTimeout      time.Duration      `json:"deal_timeout"`
 	DealFoundTime    time.Time          `json:"deal_found_time"`
-	Strategy         StrategyMonitoring `json:"strategy"`
+	Strategy         StrategyMonitoring `json:"strategy_monitoring"`
 	Volume           float64            `json:"volume"`
 	PriceStart       float64            `json:"price_start"`
 	PriceClose       float64            `json:"price_close"`
 	PriceAbort       float64            `json:"price_abort"`
+	// Thresholds       *Thresholds
 }
 
 type StrategyMonitoring struct {
-	Strategy               Strategy               `json:"name"`
+	Strategy               Strategy               `json:"strategy"`
 	SlowExchangeIndicators map[string]interface{} `json:"slow_exchange_indicators"`
 	FastExchangeIndicators map[string]interface{} `json:"fast_exchange_indicators"`
 }

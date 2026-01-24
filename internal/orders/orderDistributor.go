@@ -49,6 +49,7 @@ type AccountWorker struct {
 	LockStream   chan bool         `json:"-"`
 	OrderStream  chan AccountOrder `json:"-"`
 	AccountOrder AccountOrder
+	Db           *storage.ClickHouse
 }
 
 type AccountOrder struct {
@@ -121,7 +122,7 @@ func (aw *AccountWorker) insertMetrics() {
 		log.Println("json marshal error:", err)
 		return
 	}
-	if err := storage.InsertAccountMetricsJSON(outp); err != nil {
+	if err := aw.Db.InsertAccountMetricsJSON(outp); err != nil {
 
 		log.Println("Clickhouse insert error:", err)
 	} else {

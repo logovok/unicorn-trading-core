@@ -13,7 +13,8 @@ import (
 )
 
 func main() {
-	err := storage.InitClickHouse()
+	db := storage.ClickHouse{}
+	err := db.InitClickHouse()
 	if err != nil {
 		log.Println("Failed to start ClickHouse")
 	}
@@ -80,6 +81,7 @@ func main() {
 		IsLocked:    false,
 		LockStream:  make(chan bool),
 		OrderStream: make(chan orders.AccountOrder),
+		Db:          &db,
 	}
 	go aw1.Run()
 	aw2 := orders.AccountWorker{
@@ -87,6 +89,7 @@ func main() {
 		IsLocked:    false,
 		LockStream:  make(chan bool),
 		OrderStream: make(chan orders.AccountOrder),
+		Db:          &db,
 	}
 	go aw2.Run()
 

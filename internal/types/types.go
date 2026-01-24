@@ -79,10 +79,11 @@ type Order struct {
 	PriceStart       float64            `json:"price_start"`
 	PriceClose       float64            `json:"price_close"`
 	PriceAbort       float64            `json:"price_abort"`
+	// Thresholds       *Thresholds
 }
 
 type StrategyMonitoring struct {
-	Strategy               Strategy               `json:"name"`
+	Strategy               Strategy               `json:"strategy"`
 	SlowExchangeIndicators map[string]interface{} `json:"slow_exchange_indicators"`
 	FastExchangeIndicators map[string]interface{} `json:"fast_exchange_indicators"`
 }

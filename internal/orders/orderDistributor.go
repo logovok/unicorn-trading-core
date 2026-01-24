@@ -103,7 +103,7 @@ func (aw *AccountWorker) ProcessOrder() {
 }
 
 func (aw *AccountWorker) storeMetrics(value types.PriceTime, isOK bool) {
-	earned := math.Abs(value.Price/aw.AccountOrder.PriceStart-1)*aw.AccountOrder.BuyVolume - aw.AccountOrder.BuyVolume*aw.AccountOrder.Coin.Commission
+	earned := math.Abs(value.Price/aw.AccountOrder.PriceStart-1)*aw.AccountOrder.BuyVolume - aw.AccountOrder.BuyVolume*aw.AccountOrder.SlowExchangeCoin.Commission
 	if !isOK {
 		earned = earned * -1
 	}

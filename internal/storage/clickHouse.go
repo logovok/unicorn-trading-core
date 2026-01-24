@@ -3,19 +3,24 @@ package storage
 import (
 	"context"
 	"time"
+	"trading/core/config"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 )
 
-var CH clickhouse.Conn
+type ClickHouse struct {
+	CHConn clickhouse.Conn
+}
 
-func InitClickHouse() error {
+func (CH *ClickHouse) InitClickHouse() error {
+	cfg := config.Get()
+
 	conn, err := clickhouse.Open(&clickhouse.Options{
-		Addr: []string{"gustaf.mnknta.pp.ua:9000"},
+		Addr: []string{cfg.ClickHouse.Url},
 		Auth: clickhouse.Auth{
-			Database: "default",
-			Username: "default",
-			Password: "",
+			Database: cfg.ClickHouse.DB,
+			Username: cfg.ClickHouse.UserName,
+			Password: cfg.ClickHouse.UserPassword,
 		},
 		DialTimeout: 5 * time.Second,
 	})
@@ -23,12 +28,12 @@ func InitClickHouse() error {
 		return err
 	}
 
-	CH = conn
+	CH.CHConn = conn
 	return nil
 }
 
-func InsertAccountMetricsJSON(jsonPayload []byte) error {
-	batch, err := CH.PrepareBatch(
+func (CH *ClickHouse) InsertAccountMetricsJSON(jsonPayload []byte) error {
+	batch, err := CH.CHConn.PrepareBatch(
 		context.Background(),
 		"INSERT INTO account_metrics (payload)",
 	)

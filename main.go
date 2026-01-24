@@ -102,9 +102,9 @@ func main() {
 	pmd := strategies.PriceMeanDiffGlobals{
 		ThreasholdSets: map[string]*strategies.PMDThreasholdSet{
 			"untuned": {
-				CrossExchangeLag:      time.Millisecond * 400,
-				DealTimeout:           time.Millisecond * 15000,
-				OrderVolumeMultiplier: 1,
+				CrossExchangeLag: time.Millisecond * 400,
+				DealTimeout:      time.Millisecond * 15000,
+				OrderVolume:      10,
 			},
 		},
 	}

@@ -20,7 +20,7 @@ type PMDThreasholdSet struct {
 
 type PriceMeanDiff struct {
 	Name string            `json:"name"`
-	TS   *PMDThreasholdSet `json:"threashold_set"`
+	TS   *PMDThreasholdSet `json:"threshold_set"`
 }
 
 func (cpd *PriceMeanDiff) GetName() string {

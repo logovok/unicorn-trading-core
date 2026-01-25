@@ -52,7 +52,7 @@ func main() {
 	mex.Coins["btcusdt"] = &types.Coin{
 		Symbol:     "BTC_USDT",
 		Multiplier: 1,
-		Commission: 0.02,
+		Commission: 0,
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
 	}
@@ -60,7 +60,7 @@ func main() {
 	mex.Coins["shiba"] = &types.Coin{
 		Symbol:     "SHIB_USDT",
 		Multiplier: 1,
-		Commission: 0.02,
+		Commission: 0,
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
 	}
@@ -98,6 +98,14 @@ func main() {
 				DiffThresholdPercent:               5.65 * math.Pow10(-5),
 				CrossExchangePriceThresholdPercent: 1.15 * math.Pow10(-5),
 			},
+			"profitable": {
+				Name:                               "profitable",
+				CrossExchangeLag:                   time.Millisecond * 400,
+				DealTimeout:                        time.Millisecond * 15000,
+				OrderVolume:                        10,
+				DiffThresholdPercent:               0.0002,
+				CrossExchangePriceThresholdPercent: 0.0002,
+			},
 		},
 	}
 
@@ -105,8 +113,16 @@ func main() {
 		Name: "Random params",
 		TS:   pmd.ThreasholdSets["untuned"],
 	}
-	go strat1.Strategize(&binance, &mex, "btcusdt", orderDistributor.Ch)
-	go strat1.Strategize(&binance, &mex, "shiba", orderDistributor.Ch)
+
+	strat2 := strategies.PriceMeanDiff{
+		Name: "Profitable params",
+		TS:   pmd.ThreasholdSets["profitable"],
+	}
+	// go strat1.Strategize(&binance, &mex, "btcusdt", orderDistributor.Ch)
+	// go strat1.Strategize(&binance, &mex, "shiba", orderDistributor.Ch)
+
+	go strat2.Strategize(&binance, &mex, "btcusdt", orderDistributor.Ch)
+	go strat2.Strategize(&binance, &mex, "shiba", orderDistributor.Ch)
 
 	enableCoinPrice(&mex, "shiba")
 	enableCoinPrice(&mex, "btcusdt")

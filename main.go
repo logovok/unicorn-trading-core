@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"math"
 	_ "reflect"
 	"time"
 	"trading/core/exchanges/binance"
@@ -40,7 +41,7 @@ func main() {
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
 		Thresholds: types.Thresholds{
-			DiffThreshold: 5,
+			DiffThresholdPercent: 5.65 * math.Pow10(-5),
 		},
 	}
 
@@ -50,7 +51,7 @@ func main() {
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
 		Thresholds: types.Thresholds{
-			DiffThreshold: 0.000000005,
+			DiffThresholdPercent: 5.65 * math.Pow10(-5),
 		},
 	}
 
@@ -61,7 +62,7 @@ func main() {
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
 		Thresholds: types.Thresholds{
-			CrossExchangePriceThreshold: 1,
+			CrossExchangePriceThresholdPercent: 1.15 * math.Pow10(-5),
 		},
 	}
 
@@ -72,7 +73,7 @@ func main() {
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
 		Thresholds: types.Thresholds{
-			CrossExchangePriceThreshold: 0.000000000005,
+			CrossExchangePriceThresholdPercent: 1.15 * math.Pow10(-5),
 		},
 	}
 

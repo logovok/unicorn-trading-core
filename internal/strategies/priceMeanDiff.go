@@ -56,14 +56,14 @@ func (pmd *PriceMeanDiff) Process(AMD types.AvgMeanDiff, PT types.PriceTime, lea
 	}
 
 	if (AMD != types.AvgMeanDiff{} && PT != types.PriceTime{}) {
-		isUpDirect := AMD.Diff < 0
-		isDiffOK := math.Abs(AMD.Diff) >= pmd.TS.DiffThreshold // TODO: Ensure I set the threshold
+		isUpDirect := AMD.DiffPercent < 0
+		isDiffOK := math.Abs(AMD.DiffPercent) >= pmd.TS.DiffThresholdPercent // TODO: Ensure I set the threshold
 		if !isDiffOK {
 			return nil
 		}
 
-		diffExchanges := math.Abs(leadExchCoin.GetPrice(AMD.Prc) - slowExchCoin.GetPrice(PT.Price))
-		isCrossExchangePriceOK := diffExchanges >= slowExchCoin.GetPrice(slowExchCoin.Thresholds.CrossExchangePriceThreshold)
+		diffExchanges := math.Abs(leadExchCoin.GetPrice(AMD.Prc)-slowExchCoin.GetPrice(PT.Price)) / slowExchCoin.GetPrice(PT.Price)
+		isCrossExchangePriceOK := diffExchanges >= slowExchCoin.Thresholds.CrossExchangePriceThresholdPercent
 		if !isCrossExchangePriceOK {
 			return nil
 		}
@@ -71,7 +71,7 @@ func (pmd *PriceMeanDiff) Process(AMD types.AvgMeanDiff, PT types.PriceTime, lea
 		dealTimeout := pmd.TS.DealTimeout
 		volume := pmd.calcOrderVolume()
 		priceStart := pmd.calcPriceStart(PT.Price)
-		priceClose := pmd.calcPriceClose(PT.Price, (AMD.Diff / slowExchCoin.Multiplier * (-1)))
+		priceClose := pmd.calcPriceClose(PT.Price, AMD.DiffPercent)
 		priceAbort := pmd.calcPriceAbort(PT.Price)
 
 		order := types.Order{

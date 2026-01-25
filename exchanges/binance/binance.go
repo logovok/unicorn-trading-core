@@ -66,12 +66,12 @@ func (exch *Binance) GetAvgMeanDiff(c *types.Coin, aggr chan<- types.AvgMeanDiff
 		}
 
 		vwap := sumPV / sumV
-		dif := vwap - price
+		dif := (vwap - price) / vwap
 		aggregation := types.AvgMeanDiff{
-			Avg:  vwap,
-			Diff: dif,
-			Prc:  price,
-			Time: time.Now(),
+			Avg:         vwap,
+			DiffPercent: dif,
+			Prc:         price,
+			Time:        time.Now(),
 		}
 
 		aggr <- aggregation

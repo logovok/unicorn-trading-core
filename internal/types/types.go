@@ -22,8 +22,8 @@ type Exchange struct {
 }
 
 type Thresholds struct {
-	DiffThreshold               float64 `json:"diff_threshold"`
-	CrossExchangePriceThreshold float64 `json:"cept"`
+	DiffThresholdPercent               float64 `json:"diff_threshold"`
+	CrossExchangePriceThresholdPercent float64 `json:"cept"`
 }
 
 type Coin struct {
@@ -57,10 +57,10 @@ type Trade struct {
 }
 
 type AvgMeanDiff struct {
-	Avg  float64   `json:"avg"`
-	Diff float64   `json:"diff"`
-	Prc  float64   `json:"prc"`
-	Time time.Time `json:"time"`
+	Avg         float64   `json:"avg"`
+	DiffPercent float64   `json:"diff"`
+	Prc         float64   `json:"prc"`
+	Time        time.Time `json:"time"`
 }
 
 type PriceTime struct {

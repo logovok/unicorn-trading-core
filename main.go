@@ -40,7 +40,7 @@ func main() {
 		Multiplier: 1,
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
-		Thresholds: types.Thresholds{
+		Thresholds: &types.Thresholds{
 			DiffThresholdPercent: 5.65 * math.Pow10(-5),
 		},
 	}
@@ -50,7 +50,7 @@ func main() {
 		Multiplier: 0.001,
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
-		Thresholds: types.Thresholds{
+		Thresholds: &types.Thresholds{
 			DiffThresholdPercent: 5.65 * math.Pow10(-5),
 		},
 	}
@@ -61,7 +61,7 @@ func main() {
 		Commission: 0.02,
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
-		Thresholds: types.Thresholds{
+		Thresholds: &types.Thresholds{
 			CrossExchangePriceThresholdPercent: 1.15 * math.Pow10(-5),
 		},
 	}
@@ -72,7 +72,7 @@ func main() {
 		Commission: 0.02,
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
-		Thresholds: types.Thresholds{
+		Thresholds: &types.Thresholds{
 			CrossExchangePriceThresholdPercent: 1.15 * math.Pow10(-5),
 		},
 	}

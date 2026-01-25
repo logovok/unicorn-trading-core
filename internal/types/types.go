@@ -33,7 +33,7 @@ type Coin struct {
 	Commission float64       `default:"0"`
 	Window     time.Duration `json:"window"`
 	Data       *CoinData     `json:"coin_data"`
-	Thresholds Thresholds    `json:"thresholds"`
+	Thresholds *Thresholds   `json:"thresholds"`
 }
 
 type CoinData struct {

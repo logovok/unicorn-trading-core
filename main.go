@@ -109,10 +109,10 @@ func main() {
 		},
 	}
 
-	strat1 := strategies.PriceMeanDiff{
-		Name: "Random params",
-		TS:   pmd.ThreasholdSets["untuned"],
-	}
+	// strat1 := strategies.PriceMeanDiff{
+	// 	Name: "Random params",
+	// 	TS:   pmd.ThreasholdSets["untuned"],
+	// }
 
 	strat2 := strategies.PriceMeanDiff{
 		Name: "Profitable params",

@@ -51,7 +51,7 @@ func main() {
 	mex.Coins["btcusdt"] = &types.Coin{
 		Symbol:     "BTC_USDT",
 		Multiplier: 1,
-		Commission: 0.02,
+		Commission: 0.0002,
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
 	}
@@ -59,7 +59,7 @@ func main() {
 	mex.Coins["shiba"] = &types.Coin{
 		Symbol:     "SHIB_USDT",
 		Multiplier: 1,
-		Commission: 0.02,
+		Commission: 0.0002,
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
 	}

@@ -40,9 +40,6 @@ func main() {
 		Multiplier: 1,
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
-		Thresholds: &types.Thresholds{
-			DiffThresholdPercent: 5.65 * math.Pow10(-5),
-		},
 	}
 
 	binance.Coins["shiba"] = &types.Coin{
@@ -50,9 +47,6 @@ func main() {
 		Multiplier: 0.001,
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
-		Thresholds: &types.Thresholds{
-			DiffThresholdPercent: 5.65 * math.Pow10(-5),
-		},
 	}
 
 	mex.Coins["btcusdt"] = &types.Coin{
@@ -61,9 +55,6 @@ func main() {
 		Commission: 0.02,
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
-		Thresholds: &types.Thresholds{
-			CrossExchangePriceThresholdPercent: 1.15 * math.Pow10(-5),
-		},
 	}
 
 	mex.Coins["shiba"] = &types.Coin{
@@ -72,9 +63,6 @@ func main() {
 		Commission: 0.02,
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
-		Thresholds: &types.Thresholds{
-			CrossExchangePriceThresholdPercent: 1.15 * math.Pow10(-5),
-		},
 	}
 
 	aw1 := orders.AccountWorker{
@@ -103,10 +91,12 @@ func main() {
 	pmd := strategies.PriceMeanDiffGlobals{
 		ThreasholdSets: map[string]*strategies.PMDThreasholdSet{
 			"untuned": {
-				Name:             "untuned",
-				CrossExchangeLag: time.Millisecond * 400,
-				DealTimeout:      time.Millisecond * 15000,
-				OrderVolume:      10,
+				Name:                               "untuned",
+				CrossExchangeLag:                   time.Millisecond * 400,
+				DealTimeout:                        time.Millisecond * 15000,
+				OrderVolume:                        10,
+				DiffThresholdPercent:               5.65 * math.Pow10(-5),
+				CrossExchangePriceThresholdPercent: 1.15 * math.Pow10(-5),
 			},
 		},
 	}

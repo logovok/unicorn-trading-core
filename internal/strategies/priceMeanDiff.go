@@ -63,7 +63,7 @@ func (pmd *PriceMeanDiff) Process(AMD types.AvgMeanDiff, PT types.PriceTime, lea
 		}
 
 		diffExchanges := math.Abs(leadExchCoin.GetPrice(AMD.Prc)-slowExchCoin.GetPrice(PT.Price)) / slowExchCoin.GetPrice(PT.Price)
-		isCrossExchangePriceOK := diffExchanges >= slowExchCoin.Thresholds.CrossExchangePriceThresholdPercent
+		isCrossExchangePriceOK := diffExchanges >= pmd.TS.CrossExchangePriceThresholdPercent
 		if !isCrossExchangePriceOK {
 			return nil
 		}

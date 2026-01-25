@@ -10,12 +10,12 @@ type PMDThreasholdSet struct {
 	// TODO: Adjust value calc + distributor logic so that data is kept for longest window and distributed as asked
 	// OR to do separate calcs for different windows
 	// Window             time.Duration `json:"window"`
-	Name                        string        `json:"threshold_set_name"`
-	CrossExchangeLag            time.Duration `json:"cross_exchange_lag"`
-	DealTimeout                 time.Duration `json:"deal_timeout"`
-	OrderVolume                 float64       `json:"order_volume"`
-	DiffThresholdPercent        float64       `json:"diff_threashold"`
-	CrossExchangePriceThreshold float64       `json:"cross_exchange_price_threshold"`
+	Name                               string        `json:"threshold_set_name"`
+	CrossExchangeLag                   time.Duration `json:"cross_exchange_lag"`
+	DealTimeout                        time.Duration `json:"deal_timeout"`
+	OrderVolume                        float64       `json:"order_volume"`
+	DiffThresholdPercent               float64       `json:"diff_threashold"`
+	CrossExchangePriceThresholdPercent float64       `json:"cross_exchange_price_threshold"`
 }
 
 type PriceMeanDiff struct {

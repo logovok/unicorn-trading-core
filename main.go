@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"math"
 	_ "reflect"
 	"time"
 	"trading/core/exchanges/binance"
@@ -52,7 +51,7 @@ func main() {
 	mex.Coins["btcusdt"] = &types.Coin{
 		Symbol:     "BTC_USDT",
 		Multiplier: 1,
-		Commission: 0,
+		Commission: 0.02,
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
 	}
@@ -60,7 +59,7 @@ func main() {
 	mex.Coins["shiba"] = &types.Coin{
 		Symbol:     "SHIB_USDT",
 		Multiplier: 1,
-		Commission: 0,
+		Commission: 0.02,
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
 	}
@@ -90,39 +89,57 @@ func main() {
 
 	pmd := strategies.PriceMeanDiffGlobals{
 		ThreasholdSets: map[string]*strategies.PMDThreasholdSet{
-			"untuned": {
-				Name:                               "untuned",
-				CrossExchangeLag:                   time.Millisecond * 400,
-				DealTimeout:                        time.Millisecond * 15000,
-				OrderVolume:                        10,
-				DiffThresholdPercent:               5.65 * math.Pow10(-5),
-				CrossExchangePriceThresholdPercent: 1.15 * math.Pow10(-5),
-			},
-			"profitable": {
-				Name:                               "profitable",
+			"profitable-2": {
+				Name:                               "profitable-2",
 				CrossExchangeLag:                   time.Millisecond * 400,
 				DealTimeout:                        time.Millisecond * 15000,
 				OrderVolume:                        10,
 				DiffThresholdPercent:               0.0002,
 				CrossExchangePriceThresholdPercent: 0.0002,
 			},
+			"profitable-4": {
+				Name:                               "profitable-4",
+				CrossExchangeLag:                   time.Millisecond * 400,
+				DealTimeout:                        time.Millisecond * 15000,
+				OrderVolume:                        10,
+				DiffThresholdPercent:               0.0004,
+				CrossExchangePriceThresholdPercent: 0.0004,
+			},
+			"profitable-8": {
+				Name:                               "profitable-8",
+				CrossExchangeLag:                   time.Millisecond * 400,
+				DealTimeout:                        time.Millisecond * 15000,
+				OrderVolume:                        10,
+				DiffThresholdPercent:               0.0008,
+				CrossExchangePriceThresholdPercent: 0.0008,
+			},
+			"profitable-16": {
+				Name:                               "profitable-16",
+				CrossExchangeLag:                   time.Millisecond * 400,
+				DealTimeout:                        time.Millisecond * 15000,
+				OrderVolume:                        10,
+				DiffThresholdPercent:               0.0016,
+				CrossExchangePriceThresholdPercent: 0.0016,
+			},
+			"profitable-32": {
+				Name:                               "profitable-32",
+				CrossExchangeLag:                   time.Millisecond * 400,
+				DealTimeout:                        time.Millisecond * 15000,
+				OrderVolume:                        10,
+				DiffThresholdPercent:               0.0032,
+				CrossExchangePriceThresholdPercent: 0.0032,
+			},
 		},
 	}
 
-	// strat1 := strategies.PriceMeanDiff{
-	// 	Name: "Random params",
-	// 	TS:   pmd.ThreasholdSets["untuned"],
-	// }
-
-	strat2 := strategies.PriceMeanDiff{
-		Name: "Profitable params",
-		TS:   pmd.ThreasholdSets["profitable"],
+	for _, TS := range pmd.ThreasholdSets {
+		strat := strategies.PriceMeanDiff{
+			Name: "Price mean diff",
+			TS:   TS,
+		}
+		go strat.Strategize(&binance, &mex, "btcusdt", orderDistributor.Ch)
+		go strat.Strategize(&binance, &mex, "shiba", orderDistributor.Ch)
 	}
-	// go strat1.Strategize(&binance, &mex, "btcusdt", orderDistributor.Ch)
-	// go strat1.Strategize(&binance, &mex, "shiba", orderDistributor.Ch)
-
-	go strat2.Strategize(&binance, &mex, "btcusdt", orderDistributor.Ch)
-	go strat2.Strategize(&binance, &mex, "shiba", orderDistributor.Ch)
 
 	enableCoinPrice(&mex, "shiba")
 	enableCoinPrice(&mex, "btcusdt")

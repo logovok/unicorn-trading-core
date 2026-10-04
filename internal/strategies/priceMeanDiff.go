@@ -12,13 +12,13 @@ import (
 func (pmd *PriceMeanDiff) Strategize(leadExchange types.ExchangeAvgMeanDiff, slowExchange types.ExchangePrice, coinName string, orderChan chan<- types.Order) {
 	leadExchCoin, ok := leadExchange.GetCoin(coinName)
 	if !ok {
-		fmt.Println("Lead exchange doesn't has required coin")
+		fmt.Println("Lead exchange doesn't have the required coin")
 		return
 	}
 
 	slowExchCoin, ok := slowExchange.GetCoin(coinName)
 	if !ok {
-		fmt.Println("Slow exchange doesn't has required coin")
+		fmt.Println("Slow exchange doesn't have the required coin")
 		return
 	}
 

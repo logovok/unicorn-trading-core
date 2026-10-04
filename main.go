@@ -20,14 +20,14 @@ func main() {
 		log.Println("Failed to start ClickHouse")
 	}
 
-	binance := binance.Binance{
+	binanceExch := binance.Binance{
 		Exchange: types.Exchange{
 			Name:   "Binance",
 			BaseWS: "fstream.binance.com",
 			Coins:  map[string]*types.Coin{},
 		},
 	}
-	mex := mexc.Mex{
+	mexcExch := mexc.Mex{
 		Exchange: types.Exchange{
 			Name:   "Mex",
 			BaseWS: "contract.mexc.com",
@@ -35,7 +35,7 @@ func main() {
 		},
 	}
 
-	binance.Coins["btcusdt"] = &types.Coin{
+	binanceExch.Coins["btcusdt"] = &types.Coin{
 		Symbol:     "btcusdt",
 		Multiplier: 1,
 		Window:     (15 * time.Second),
@@ -45,7 +45,7 @@ func main() {
 		},
 	}
 
-	binance.Coins["shiba"] = &types.Coin{
+	binanceExch.Coins["shiba"] = &types.Coin{
 		Symbol:     "1000shibusdt",
 		Multiplier: 0.001,
 		Window:     (15 * time.Second),
@@ -55,7 +55,7 @@ func main() {
 		},
 	}
 
-	mex.Coins["btcusdt"] = &types.Coin{
+	mexcExch.Coins["btcusdt"] = &types.Coin{
 		Symbol:     "BTC_USDT",
 		Multiplier: 1,
 		Commission: 0.02,
@@ -66,7 +66,7 @@ func main() {
 		},
 	}
 
-	mex.Coins["shiba"] = &types.Coin{
+	mexcExch.Coins["shiba"] = &types.Coin{
 		Symbol:     "SHIB_USDT",
 		Multiplier: 1,
 		Commission: 0.02,
@@ -101,7 +101,7 @@ func main() {
 	go orderDistributor.Run()
 
 	pmd := strategies.PriceMeanDiffGlobals{
-		ThreasholdSets: map[string]*strategies.PMDThreasholdSet{
+		ThresholdSets: map[string]*strategies.PMDThresholdSet{
 			"untuned": {
 				Name:             "untuned",
 				CrossExchangeLag: time.Millisecond * 400,
@@ -113,15 +113,15 @@ func main() {
 
 	strat1 := strategies.PriceMeanDiff{
 		Name: "Random params",
-		TS:   pmd.ThreasholdSets["untuned"],
+		TS:   pmd.ThresholdSets["untuned"],
 	}
-	go strat1.Strategize(&binance, &mex, "btcusdt", orderDistributor.Ch)
-	go strat1.Strategize(&binance, &mex, "shiba", orderDistributor.Ch)
+	go strat1.Strategize(&binanceExch, &mexcExch, "btcusdt", orderDistributor.Ch)
+	go strat1.Strategize(&binanceExch, &mexcExch, "shiba", orderDistributor.Ch)
 
-	enableCoinPrice(&mex, "shiba")
-	enableCoinPrice(&mex, "btcusdt")
-	enableCoinAVG(&binance, "shiba")
-	enableCoinAVG(&binance, "btcusdt")
+	enableCoinPrice(&mexcExch, "shiba")
+	enableCoinPrice(&mexcExch, "btcusdt")
+	enableCoinAVG(&binanceExch, "shiba")
+	enableCoinAVG(&binanceExch, "btcusdt")
 
 	log.Println("Bot started successfully")
 

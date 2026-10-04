@@ -4,12 +4,13 @@ import (
 	"log"
 	_ "reflect"
 	"time"
-	"trading/core/exchanges/binance"
-	"trading/core/exchanges/mexc"
-	"trading/core/internal/orders"
-	"trading/core/internal/storage"
-	"trading/core/internal/strategies"
-	"trading/core/internal/types"
+
+	"github.com/logovok/unicorn-trading-core/exchanges/binance"
+	"github.com/logovok/unicorn-trading-core/exchanges/mexc"
+	"github.com/logovok/unicorn-trading-core/internal/orders"
+	"github.com/logovok/unicorn-trading-core/internal/storage"
+	"github.com/logovok/unicorn-trading-core/internal/strategies"
+	"github.com/logovok/unicorn-trading-core/internal/types"
 )
 
 func main() {

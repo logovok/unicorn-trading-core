@@ -3,8 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
-	"trading/core/internal/distributors"
-	"trading/core/internal/types"
+
+	"github.com/logovok/unicorn-trading-core/internal/distributors"
+	"github.com/logovok/unicorn-trading-core/internal/types"
 )
 
 func enableCoinAVG(exch types.ExchangeAvgMeanDiff, coin string) {

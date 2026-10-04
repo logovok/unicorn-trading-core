@@ -42,12 +42,12 @@ func (pmd *PriceMeanDiff) Strategize(leadExchange types.ExchangeAvgMeanDiff, slo
 			PT = res
 		}
 
-		go func() {
-			order := pmd.Process(AMD, PT, *leadExchCoin, *slowExchCoin)
+		go func(amd types.AvgMeanDiff, pt types.PriceTime) {
+			order := pmd.Process(amd, pt, *leadExchCoin, *slowExchCoin)
 			if order != nil {
 				orderChan <- *order
 			}
-		}()
+		}(AMD, PT)
 	}
 }
 

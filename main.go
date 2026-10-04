@@ -78,16 +78,12 @@ func main() {
 
 	aw1 := orders.AccountWorker{
 		AccountID:   "worker1",
-		IsLocked:    false,
-		LockStream:  make(chan bool),
 		OrderStream: make(chan orders.AccountOrder),
 		Db:          &db,
 	}
 	go aw1.Run()
 	aw2 := orders.AccountWorker{
 		AccountID:   "worker2",
-		IsLocked:    false,
-		LockStream:  make(chan bool),
 		OrderStream: make(chan orders.AccountOrder),
 		Db:          &db,
 	}

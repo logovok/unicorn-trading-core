@@ -3,10 +3,10 @@ package strategies
 import "time"
 
 type PriceMeanDiffGlobals struct {
-	ThreasholdSets map[string]*PMDThreasholdSet
+	ThresholdSets map[string]*PMDThresholdSet
 }
 
-type PMDThreasholdSet struct {
+type PMDThresholdSet struct {
 	// TODO: Adjust value calc + distributor logic so that data is kept for longest window and distributed as asked
 	// OR to do separate calcs for different windows
 	// Window             time.Duration `json:"window"`
@@ -14,13 +14,13 @@ type PMDThreasholdSet struct {
 	CrossExchangeLag            time.Duration `json:"cross_exchange_lag"`
 	DealTimeout                 time.Duration `json:"deal_timeout"`
 	OrderVolume                 float64       `json:"order_volume"`
-	DiffThreshold               float64       `json:"diff_threashold"`
+	DiffThreshold               float64       `json:"diff_threshold"`
 	CrossExchangePriceThreshold float64       `json:"cross_exchange_price_threshold"`
 }
 
 type PriceMeanDiff struct {
-	Name string            `json:"name"`
-	TS   *PMDThreasholdSet `json:"threshold_set"`
+	Name string           `json:"name"`
+	TS   *PMDThresholdSet `json:"threshold_set"`
 }
 
 func (cpd *PriceMeanDiff) GetName() string {
@@ -28,7 +28,7 @@ func (cpd *PriceMeanDiff) GetName() string {
 }
 
 // TODO: use more params to calculate close price
-// Note: the func is bound to strategy, as we may want different implemetation of this per strategy
+// Note: the func is bound to strategy, as we may want different implementation of this per strategy
 func (pmd *PriceMeanDiff) calcPriceStart(price float64) float64 {
 	return price
 }

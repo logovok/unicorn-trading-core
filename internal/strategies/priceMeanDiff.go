@@ -58,7 +58,7 @@ func (pmd *PriceMeanDiff) Process(AMD types.AvgMeanDiff, PT types.PriceTime, lea
 
 	if (AMD != types.AvgMeanDiff{} && PT != types.PriceTime{}) {
 		isUpDirect := AMD.Diff < 0
-		isDiffOK := math.Abs(AMD.Diff) >= pmd.TS.DiffThreshold // TODO: Ensure I set the threshold
+		isDiffOK := math.Abs(AMD.Diff) >= leadExchCoin.Thresholds.DiffThreshold
 		if !isDiffOK {
 			return nil
 		}

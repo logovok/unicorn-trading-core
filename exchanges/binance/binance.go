@@ -23,7 +23,7 @@ func (exch *Binance) GetAvgMeanDiff(c *types.Coin, aggr chan<- types.AvgMeanDiff
 	u := url.URL{
 		Scheme: "wss",
 		Host:   exch.BaseWS,
-		Path:   "/ws/" + c.Symbol + "@aggTrade",
+		Path:   "/market/ws/" + c.Symbol + "@aggTrade",
 	}
 
 	var trades []types.Trade

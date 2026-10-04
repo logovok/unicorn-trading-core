@@ -22,11 +22,9 @@ func (pmd *PriceMeanDiff) Strategize(leadExchange types.ExchangeAvgMeanDiff, slo
 		return
 	}
 
+	// Indicators must be enabled (see enableCoinAVG/enableCoinPrice) before the strategy starts.
 	if leadExchCoin.Data.Avg == nil || slowExchCoin.Data.Price == nil {
-		time.Sleep(time.Second)
-		if leadExchCoin.Data.Avg == nil || slowExchCoin.Data.Price == nil {
-			log.Panicln("Coin data distribution stream not initialized")
-		}
+		log.Panicf("Coin data streams not initialized for %v", coinName)
 	}
 
 	leadAvgMeanDiffChannel := leadExchCoin.Data.Avg.Subscribe()

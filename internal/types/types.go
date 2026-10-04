@@ -2,7 +2,8 @@ package types
 
 import (
 	"time"
-	"trading/core/internal/distributors"
+
+	"github.com/logovok/unicorn-trading-core/internal/distributors"
 )
 
 var AppConfig = Config{

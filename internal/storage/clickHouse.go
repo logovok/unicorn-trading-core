@@ -3,9 +3,10 @@ package storage
 import (
 	"context"
 	"time"
-	"trading/core/config"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
+
+	"github.com/logovok/unicorn-trading-core/config"
 )
 
 type ClickHouse struct {

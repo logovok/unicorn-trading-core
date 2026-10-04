@@ -5,8 +5,9 @@ import (
 	"log"
 	"math"
 	"time"
-	"trading/core/internal/storage"
-	"trading/core/internal/types"
+
+	"github.com/logovok/unicorn-trading-core/internal/storage"
+	"github.com/logovok/unicorn-trading-core/internal/types"
 )
 
 type OrderDistributor struct {

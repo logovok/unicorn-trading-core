@@ -5,9 +5,10 @@ import (
 	"log"
 	"net/url"
 	"time"
-	"trading/core/internal/types"
 
 	"github.com/gorilla/websocket"
+
+	"github.com/logovok/unicorn-trading-core/internal/types"
 )
 
 func (exch *Mex) GetPrice(c *types.Coin, price chan<- types.PriceTime) {

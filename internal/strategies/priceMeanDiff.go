@@ -5,7 +5,8 @@ import (
 	"log"
 	"math"
 	"time"
-	"trading/core/internal/types"
+
+	"github.com/logovok/unicorn-trading-core/internal/types"
 )
 
 func (pmd *PriceMeanDiff) Strategize(leadExchange types.ExchangeAvgMeanDiff, slowExchange types.ExchangePrice, coinName string, orderChan chan<- types.Order) {

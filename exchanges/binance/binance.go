@@ -6,9 +6,10 @@ import (
 	"net/url"
 	"strconv"
 	"time"
-	"trading/core/internal/types"
 
 	"github.com/gorilla/websocket"
+
+	"github.com/logovok/unicorn-trading-core/internal/types"
 )
 
 func (exch *Binance) GetAvgMeanDiff(c *types.Coin, aggr chan<- types.AvgMeanDiff) {

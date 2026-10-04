@@ -6,16 +6,6 @@ import (
 	"github.com/logovok/unicorn-trading-core/internal/distributors"
 )
 
-var AppConfig = Config{
-	OrderTimeout: time.Millisecond * 15000,
-	OrderVolume:  10,
-}
-
-type Config struct {
-	OrderTimeout time.Duration
-	OrderVolume  float64
-}
-
 type Exchange struct {
 	Name   string
 	BaseWS string
@@ -30,8 +20,8 @@ type Thresholds struct {
 type Coin struct {
 	Symbol string `json:"coin"`
 	// leading exchange price / Multiplier = current exchange price
-	Multiplier float64       `default:"1"`
-	Commission float64       `default:"0"`
+	Multiplier float64
+	Commission float64
 	Window     time.Duration `json:"window"`
 	Data       *CoinData     `json:"coin_data"`
 	Thresholds Thresholds    `json:"thresholds"`
@@ -80,7 +70,6 @@ type Order struct {
 	PriceStart       float64            `json:"price_start"`
 	PriceClose       float64            `json:"price_close"`
 	PriceAbort       float64            `json:"price_abort"`
-	// Thresholds       *Thresholds
 }
 
 type StrategyMonitoring struct {

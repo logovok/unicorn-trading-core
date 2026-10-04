@@ -1,9 +1,7 @@
 package config
 
 import (
-	"log"
 	"os"
-	"strconv"
 	"sync"
 )
 
@@ -33,10 +31,10 @@ func Get() *Config {
 func load() *Config {
 	cfg := &Config{
 		ClickHouse: ClickHouseConfig{
-			Url:          getEnv("CLICKHOUSE_URL", "localhost"),
-			UserName:     getEnv("CLICKHOUSE_USERNAME", "postgres"),
+			Url:          getEnv("CLICKHOUSE_URL", "localhost:9000"),
+			UserName:     getEnv("CLICKHOUSE_USERNAME", "default"),
 			UserPassword: getEnv("CLICKHOUSE_PASSWORD", ""),
-			DB:           getEnv("DB_NAME", "postgres"),
+			DB:           getEnv("DB_NAME", "default"),
 		},
 	}
 
@@ -48,18 +46,4 @@ func getEnv(key, defaultVal string) string {
 		return v
 	}
 	return defaultVal
-}
-
-func getEnvAsInt(key string, defaultVal int) int {
-	v, ok := os.LookupEnv(key)
-	if !ok {
-		return defaultVal
-	}
-
-	i, err := strconv.Atoi(v)
-	if err != nil {
-		log.Fatalf("Invalid integer value for %s: %s", key, v)
-	}
-
-	return i
 }

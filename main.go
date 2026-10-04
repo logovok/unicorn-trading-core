@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	_ "reflect"
 	"time"
 
 	"github.com/logovok/unicorn-trading-core/exchanges/binance"

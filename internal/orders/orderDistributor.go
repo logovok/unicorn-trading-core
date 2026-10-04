@@ -43,7 +43,7 @@ type AccountWorker struct {
 	AccountID    string            `json:"account_id"`
 	OrderStream  chan AccountOrder `json:"-"`
 	AccountOrder AccountOrder
-	Db           *storage.ClickHouse
+	Db           *storage.ClickHouse `json:"-"`
 }
 
 type AccountOrder struct {
@@ -103,19 +103,19 @@ func (aw *AccountWorker) storeMetrics(value types.PriceTime, isOK bool) {
 	aw.AccountOrder.Earned = earned
 	aw.AccountOrder.ResultClosePrice = value.Price
 
-	go aw.insertMetrics()
+	// Marshal now: the worker reuses aw.AccountOrder for the next deal while the insert runs.
+	payload, err := json.Marshal(aw)
+	if err != nil {
+		log.Println("json marshal error:", err)
+	} else {
+		go aw.insertMetrics(payload)
+	}
 
 	log.Printf("ACC: %v  COIN: %v EARNED: %v", aw.AccountID, aw.AccountOrder.SlowExchangeCoin.Symbol, earned)
 }
 
-func (aw *AccountWorker) insertMetrics() {
-	outp, err := json.Marshal(aw)
-	if err != nil {
-		log.Println("json marshal error:", err)
-		return
-	}
-	if err := aw.Db.InsertAccountMetricsJSON(outp); err != nil {
-
+func (aw *AccountWorker) insertMetrics(payload []byte) {
+	if err := aw.Db.InsertAccountMetricsJSON(payload); err != nil {
 		log.Println("Clickhouse insert error:", err)
 	} else {
 		log.Println("ClickHouse insert successful")

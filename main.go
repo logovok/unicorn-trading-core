@@ -14,9 +14,8 @@ import (
 
 func main() {
 	db := storage.ClickHouse{}
-	err := db.InitClickHouse()
-	if err != nil {
-		log.Println("Failed to start ClickHouse")
+	if err := db.InitClickHouse(); err != nil {
+		log.Fatalf("Failed to connect to ClickHouse: %v", err)
 	}
 
 	binanceExch := binance.Binance{

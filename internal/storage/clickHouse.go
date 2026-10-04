@@ -29,6 +29,13 @@ func (CH *ClickHouse) InitClickHouse() error {
 		return err
 	}
 
+	// Open is lazy; Ping makes sure the server is actually reachable.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := conn.Ping(ctx); err != nil {
+		return err
+	}
+
 	CH.CHConn = conn
 	return nil
 }

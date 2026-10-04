@@ -2,6 +2,9 @@ package main
 
 import (
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/logovok/unicorn-trading-core/exchanges/binance"
@@ -119,7 +122,12 @@ func main() {
 
 	log.Println("Bot started successfully")
 
-	for {
-		time.Sleep(1 * time.Second)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	<-stop
+
+	log.Println("Shutting down")
+	if err := db.CHConn.Close(); err != nil {
+		log.Println("ClickHouse close error:", err)
 	}
 }

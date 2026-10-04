@@ -63,7 +63,9 @@ type AccountOrder struct {
 }
 
 func (aw *AccountWorker) ProcessOrder() {
-	var ch = aw.AccountOrder.SlowExchangeCoin.Data.Price.Subscribe()
+	prices := aw.AccountOrder.SlowExchangeCoin.Data.Price
+	ch := prices.Subscribe()
+	defer prices.Unsubscribe(ch)
 	// Open AccountOrder in Exchange
 	timeout := time.Now().Add(aw.AccountOrder.DealTimeout)
 	aw.AccountOrder.DealOpenTime = time.Now()

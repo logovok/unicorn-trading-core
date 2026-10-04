@@ -110,13 +110,13 @@ func main() {
 		Name: "Random params",
 		TS:   pmd.ThresholdSets["untuned"],
 	}
-	go strat1.Strategize(&binanceExch, &mexcExch, "btcusdt", orderDistributor.Ch)
-	go strat1.Strategize(&binanceExch, &mexcExch, "shiba", orderDistributor.Ch)
-
 	enableCoinPrice(&mexcExch, "shiba")
 	enableCoinPrice(&mexcExch, "btcusdt")
 	enableCoinAVG(&binanceExch, "shiba")
 	enableCoinAVG(&binanceExch, "btcusdt")
+
+	go strat1.Strategize(&binanceExch, &mexcExch, "btcusdt", orderDistributor.Ch)
+	go strat1.Strategize(&binanceExch, &mexcExch, "shiba", orderDistributor.Ch)
 
 	log.Println("Bot started successfully")
 

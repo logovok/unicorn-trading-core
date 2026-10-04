@@ -3,7 +3,6 @@ package orders
 import (
 	"encoding/json"
 	"log"
-	"math"
 	"time"
 
 	"github.com/logovok/unicorn-trading-core/internal/storage"
@@ -65,40 +64,38 @@ func (aw *AccountWorker) ProcessOrder() {
 	for value := range ch {
 		if time.Now().After(timeout) {
 			//close AccountOrder
-			aw.storeMetrics(value, true)
+			aw.storeMetrics(value)
 			break
 		}
 		if aw.AccountOrder.IsUpDirect {
 			if value.Price >= aw.AccountOrder.PriceClose {
 				//close AccountOrder
-				aw.storeMetrics(value, true)
+				aw.storeMetrics(value)
 				break
 			}
 			if value.Price < aw.AccountOrder.PriceAbort {
 				//close AccountOrder
-				aw.storeMetrics(value, false)
+				aw.storeMetrics(value)
 				break
 			}
 		} else {
 			if value.Price <= aw.AccountOrder.PriceClose {
 				//close AccountOrder
-				aw.storeMetrics(value, true)
+				aw.storeMetrics(value)
 				break
 			}
 			if value.Price > aw.AccountOrder.PriceAbort {
 				//close AccountOrder
-				aw.storeMetrics(value, false)
+				aw.storeMetrics(value)
 				break
 			}
 		}
 	}
 }
 
-func (aw *AccountWorker) storeMetrics(value types.PriceTime, isOK bool) {
-	earned := math.Abs(value.Price/aw.AccountOrder.PriceStart-1)*aw.AccountOrder.BuyVolume - aw.AccountOrder.BuyVolume*aw.AccountOrder.SlowExchangeCoin.Commission
-	if !isOK {
-		earned = earned * -1
-	}
+func (aw *AccountWorker) storeMetrics(value types.PriceTime) {
+	ao := aw.AccountOrder
+	earned := calcPnL(ao.PriceStart, value.Price, ao.BuyVolume, ao.SlowExchangeCoin.Commission, ao.IsUpDirect)
 	aw.AccountOrder.DealCloseTime = time.Now()
 	aw.AccountOrder.Earned = earned
 	aw.AccountOrder.ResultClosePrice = value.Price
@@ -120,4 +117,14 @@ func (aw *AccountWorker) insertMetrics(payload []byte) {
 	} else {
 		log.Println("ClickHouse insert successful")
 	}
+}
+
+// calcPnL returns the profit of a deal opened at start and closed at closePrice,
+// net of commission. A long (isUp) deal profits when the price rises, a short one when it falls.
+func calcPnL(start, closePrice, volume, commission float64, isUp bool) float64 {
+	ret := closePrice/start - 1
+	if !isUp {
+		ret = -ret
+	}
+	return ret*volume - volume*commission
 }

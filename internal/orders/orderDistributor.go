@@ -18,36 +18,29 @@ type OrderDistributor struct {
 func (od *OrderDistributor) Run() {
 	for order := range od.Ch {
 		buyVolume := order.Volume // It will be calculated
+		ao := AccountOrder{BuyVolume: buyVolume, Order: order}
+		// A send on the unbuffered OrderStream succeeds only if the worker is idle
+		// and waiting; busy workers are skipped. If all are busy, the order is dropped.
+	dispatch:
 		for _, worker := range od.AccountWorkers {
-			if !worker.IsLocked {
-				worker.OrderStream <- AccountOrder{
-					BuyVolume: buyVolume,
-					Order:     order,
-				}
-				break
+			select {
+			case worker.OrderStream <- ao:
+				break dispatch
+			default:
 			}
 		}
 	}
-
 }
 
 func (aw *AccountWorker) Run() {
-	for {
-		if aw.IsLocked {
-			aw.IsLocked = <-aw.LockStream
-		} else {
-			accountOrder := <-aw.OrderStream
-			aw.IsLocked = true
-			aw.AccountOrder = accountOrder
-			aw.ProcessOrder()
-		}
+	for accountOrder := range aw.OrderStream {
+		aw.AccountOrder = accountOrder
+		aw.ProcessOrder()
 	}
 }
 
 type AccountWorker struct {
 	AccountID    string            `json:"account_id"`
-	IsLocked     bool              `json:"-"`
-	LockStream   chan bool         `json:"-"`
 	OrderStream  chan AccountOrder `json:"-"`
 	AccountOrder AccountOrder
 	Db           *storage.ClickHouse
@@ -99,10 +92,6 @@ func (aw *AccountWorker) ProcessOrder() {
 			}
 		}
 	}
-	// TODO: Solve/Fix
-	go func() {
-		aw.LockStream <- false
-	}()
 }
 
 func (aw *AccountWorker) storeMetrics(value types.PriceTime, isOK bool) {

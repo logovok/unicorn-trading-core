@@ -26,8 +26,7 @@ func (exch *Binance) GetAvgMeanDiff(c *types.Coin, aggr chan<- types.AvgMeanDiff
 		Path:   "/market/ws/" + c.Symbol + "@aggTrade",
 	}
 
-	var trades []types.Trade
-	var sumPV, sumV float64
+	window := vwapWindow{size: c.Window}
 	backoff := minBackoff
 
 	// Reconnect forever; the VWAP window is kept across reconnects.
@@ -58,30 +57,11 @@ func (exch *Binance) GetAvgMeanDiff(c *types.Coin, aggr chan<- types.AvgMeanDiff
 			qty, _ := strconv.ParseFloat(agg.Qty, 64)
 			t := time.UnixMilli(agg.TradeTime)
 
-			trades = append(trades, types.Trade{
-				Time:   t,
-				Price:  price,
-				Volume: qty,
-			})
-			sumPV += price * qty
-			sumV += qty
-
-			cutoff := time.Now().Add(-c.Window)
-			i := 0
-			for i < len(trades) && !trades[i].Time.After(cutoff) {
-				sumPV -= trades[i].Price * trades[i].Volume
-				sumV -= trades[i].Volume
-				i++
-			}
-			if i > 0 {
-				trades = trades[i:]
-			}
-
-			if sumV == 0 {
+			vwap, ok := window.add(types.Trade{Time: t, Price: price, Volume: qty}, time.Now())
+			if !ok {
 				continue
 			}
 
-			vwap := sumPV / sumV
 			dif := vwap - price
 			aggregation := types.AvgMeanDiff{
 				Avg:  vwap,

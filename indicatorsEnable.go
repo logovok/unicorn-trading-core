@@ -3,15 +3,16 @@ package main
 import (
 	"fmt"
 	"log"
-	"trading/core/internal/distributors"
-	"trading/core/internal/types"
+
+	"github.com/logovok/unicorn-trading-core/internal/distributors"
+	"github.com/logovok/unicorn-trading-core/internal/types"
 )
 
 func enableCoinAVG(exch types.ExchangeAvgMeanDiff, coin string) {
 	ch := make(chan types.AvgMeanDiff)
 	c, ok := exch.GetCoin(coin)
 	if !ok {
-		log.Panicf("Coin: %v doesn't exist for an Exchage: %v\n", coin, exch.GetName())
+		log.Panicf("Coin: %v doesn't exist for exchange: %v\n", coin, exch.GetName())
 	}
 	if c.Data.Avg == nil {
 		c.Data.Avg = distributors.NewDataDistributor(ch)
@@ -26,7 +27,7 @@ func enableCoinPrice(exch types.ExchangePrice, coin string) {
 	ch := make(chan types.PriceTime)
 	c, ok := exch.GetCoin(coin)
 	if !ok {
-		log.Panicf("Coin: %v doesn't exist for an Exchage: %v\n", coin, exch.GetName())
+		log.Panicf("Coin: %v doesn't exist for exchange: %v\n", coin, exch.GetName())
 	}
 	if c.Data.Price == nil {
 		c.Data.Price = distributors.NewDataDistributor(ch)

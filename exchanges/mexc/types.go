@@ -1,6 +1,6 @@
 package mexc
 
-import "trading/core/internal/types"
+import "github.com/logovok/unicorn-trading-core/internal/types"
 
 type Mex struct {
 	types.Exchange

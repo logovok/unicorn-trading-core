@@ -70,7 +70,7 @@ func (pmd *PriceMeanDiff) Process(AMD types.AvgMeanDiff, PT types.PriceTime, lea
 		dealTimeout := pmd.TS.DealTimeout
 		volume := pmd.calcOrderVolume()
 		priceStart := pmd.calcPriceStart(PT.Price)
-		priceClose := pmd.calcPriceClose(PT.Price, (AMD.Diff / slowExchCoin.Multiplier * (-1)))
+		priceClose := pmd.calcPriceClose(PT.Price, -leadExchCoin.GetPrice(AMD.Diff)/slowExchCoin.Multiplier)
 		priceAbort := pmd.calcPriceAbort(PT.Price)
 
 		order := types.Order{

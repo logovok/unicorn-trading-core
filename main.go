@@ -59,7 +59,7 @@ func main() {
 	mexcExch.Coins["btcusdt"] = &types.Coin{
 		Symbol:     "BTC_USDT",
 		Multiplier: 1,
-		Commission: 0.02,
+		Commission: 0.0002, // 0.02% MEXC futures taker fee
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
 		Thresholds: types.Thresholds{
@@ -70,7 +70,7 @@ func main() {
 	mexcExch.Coins["shiba"] = &types.Coin{
 		Symbol:     "SHIB_USDT",
 		Multiplier: 1,
-		Commission: 0.02,
+		Commission: 0.0002, // 0.02% MEXC futures taker fee
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
 		Thresholds: types.Thresholds{

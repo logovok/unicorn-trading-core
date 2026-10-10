@@ -2,31 +2,33 @@ package main
 
 import (
 	"log"
-	_ "reflect"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
-	"trading/core/exchanges/binance"
-	"trading/core/exchanges/mexc"
-	"trading/core/internal/orders"
-	"trading/core/internal/storage"
-	"trading/core/internal/strategies"
-	"trading/core/internal/types"
+
+	"github.com/logovok/unicorn-trading-core/exchanges/binance"
+	"github.com/logovok/unicorn-trading-core/exchanges/mexc"
+	"github.com/logovok/unicorn-trading-core/internal/orders"
+	"github.com/logovok/unicorn-trading-core/internal/storage"
+	"github.com/logovok/unicorn-trading-core/internal/strategies"
+	"github.com/logovok/unicorn-trading-core/internal/types"
 )
 
 func main() {
 	db := storage.ClickHouse{}
-	err := db.InitClickHouse()
-	if err != nil {
-		log.Println("Failed to start ClickHouse")
+	if err := db.InitClickHouse(); err != nil {
+		log.Fatalf("Failed to connect to ClickHouse: %v", err)
 	}
 
-	binance := binance.Binance{
+	binanceExch := binance.Binance{
 		Exchange: types.Exchange{
 			Name:   "Binance",
 			BaseWS: "fstream.binance.com",
 			Coins:  map[string]*types.Coin{},
 		},
 	}
-	mex := mexc.Mex{
+	mexcExch := mexc.Mex{
 		Exchange: types.Exchange{
 			Name:   "Mex",
 			BaseWS: "contract.mexc.com",
@@ -34,7 +36,7 @@ func main() {
 		},
 	}
 
-	binance.Coins["btcusdt"] = &types.Coin{
+	binanceExch.Coins["btcusdt"] = &types.Coin{
 		Symbol:     "btcusdt",
 		Multiplier: 1,
 		Window:     (15 * time.Second),
@@ -44,7 +46,7 @@ func main() {
 		},
 	}
 
-	binance.Coins["shiba"] = &types.Coin{
+	binanceExch.Coins["shiba"] = &types.Coin{
 		Symbol:     "1000shibusdt",
 		Multiplier: 0.001,
 		Window:     (15 * time.Second),
@@ -54,10 +56,10 @@ func main() {
 		},
 	}
 
-	mex.Coins["btcusdt"] = &types.Coin{
+	mexcExch.Coins["btcusdt"] = &types.Coin{
 		Symbol:     "BTC_USDT",
 		Multiplier: 1,
-		Commission: 0.02,
+		Commission: 0.0002, // 0.02% MEXC futures taker fee
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
 		Thresholds: types.Thresholds{
@@ -65,10 +67,10 @@ func main() {
 		},
 	}
 
-	mex.Coins["shiba"] = &types.Coin{
+	mexcExch.Coins["shiba"] = &types.Coin{
 		Symbol:     "SHIB_USDT",
 		Multiplier: 1,
-		Commission: 0.02,
+		Commission: 0.0002, // 0.02% MEXC futures taker fee
 		Window:     (15 * time.Second),
 		Data:       &types.CoinData{},
 		Thresholds: types.Thresholds{
@@ -78,16 +80,12 @@ func main() {
 
 	aw1 := orders.AccountWorker{
 		AccountID:   "worker1",
-		IsLocked:    false,
-		LockStream:  make(chan bool),
 		OrderStream: make(chan orders.AccountOrder),
 		Db:          &db,
 	}
 	go aw1.Run()
 	aw2 := orders.AccountWorker{
 		AccountID:   "worker2",
-		IsLocked:    false,
-		LockStream:  make(chan bool),
 		OrderStream: make(chan orders.AccountOrder),
 		Db:          &db,
 	}
@@ -100,7 +98,7 @@ func main() {
 	go orderDistributor.Run()
 
 	pmd := strategies.PriceMeanDiffGlobals{
-		ThreasholdSets: map[string]*strategies.PMDThreasholdSet{
+		ThresholdSets: map[string]*strategies.PMDThresholdSet{
 			"untuned": {
 				Name:             "untuned",
 				CrossExchangeLag: time.Millisecond * 400,
@@ -112,19 +110,24 @@ func main() {
 
 	strat1 := strategies.PriceMeanDiff{
 		Name: "Random params",
-		TS:   pmd.ThreasholdSets["untuned"],
+		TS:   pmd.ThresholdSets["untuned"],
 	}
-	go strat1.Strategize(&binance, &mex, "btcusdt", orderDistributor.Ch)
-	go strat1.Strategize(&binance, &mex, "shiba", orderDistributor.Ch)
+	enableCoinPrice(&mexcExch, "shiba")
+	enableCoinPrice(&mexcExch, "btcusdt")
+	enableCoinAVG(&binanceExch, "shiba")
+	enableCoinAVG(&binanceExch, "btcusdt")
 
-	enableCoinPrice(&mex, "shiba")
-	enableCoinPrice(&mex, "btcusdt")
-	enableCoinAVG(&binance, "shiba")
-	enableCoinAVG(&binance, "btcusdt")
+	go strat1.Strategize(&binanceExch, &mexcExch, "btcusdt", orderDistributor.Ch)
+	go strat1.Strategize(&binanceExch, &mexcExch, "shiba", orderDistributor.Ch)
 
 	log.Println("Bot started successfully")
 
-	for {
-		time.Sleep(1 * time.Second)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	<-stop
+
+	log.Println("Shutting down")
+	if err := db.CHConn.Close(); err != nil {
+		log.Println("ClickHouse close error:", err)
 	}
 }
